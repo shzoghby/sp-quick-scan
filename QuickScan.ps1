@@ -6,23 +6,20 @@
 # Last Modified By:        Bruce Berends
 # Last Modified Date:      2023/10/13
 #=====================================================================================================================
+param(
+    [string] $tenantFullName = "engage2syddev.onmicrosoft.com",
+    #$(Read-Host -Prompt "Please enter your tenant full name (e.g., yourdomain.onmicrosoft.com)"),
+    #[string] $inputFileName = $(Read-Host -Prompt "Please enter name of site collections input file or press enter to scan the whole tenant (e.g., input-sitecollections.csv)")
+    [string] $inputFileName = "input-sitecollections.csv"
+)
 
-<#
-$csvData = Import-Csv -Path ".\AppDetails.csv"
+$csvData = Import-Csv -Path ".\Appdetails.csv"
 if (-not $csvData) {
     Write-Error "AppDetails.csv not found. Please ensure it exists in the script directory."
     exit
 }
 $appId = $csvData.AppId.Trim()
 $thumbprint = $csvData.Thumbprint.Trim()
-#>
-#========================================================
-#Variable Prompts
-#========================================================
-# Prompt for SharePoint credentials and Tenant information
-$tenantFullName = Read-Host -Prompt "Please enter your tenant full name (e.g., yourdomain.onmicrosoft.com)";
-$tenantBase = $tenantFullName.SubString(0,$tenantFullName.IndexOf('.'));
-
 
 #========================================================
 #Static Variables (no need to modify)
@@ -72,12 +69,22 @@ catch
 #Assemblies Install
 #=======================================================
 Install-RequiredModules
-Import-Module PnP.PowerShell -ErrorAction SilentlyContinue # Ensure the PnP module is imported
+
+try
+{
+    Import-Module Microsoft.Online.SharePoint.PowerShell -DisableNameChecking | out-null
+    Import-Module PnP.PowerShell -DisableNameChecking | out-null
+}
+catch
+{
+    Write-Error "Could not load required assemblies"
+    exit
+}
 
 #========================================================
 #Retrieve Site Collections
 #=======================================================
-$siteCollections = GetSitecollections -tenantFullName $tenantFullName -tenantBase $-tenantBase -inputFilePath $inputFilePath
+$siteCollections = GetSitecollections -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -inputFilePath $inputFilePath
 
 #========================================================
 #Main Run
@@ -88,13 +95,12 @@ try
     WriteInfoLog "The job is running on $($startTime)."
     if([System.IO.Directory]::Exists($jobFolder) -eq $false){
         [System.IO.Directory]::CreateDirectory($jobFolder) | Out-Null
-        WriteReport '"SiteCollection","Site","List","LastModified","TotalFileCount","TotalFileStreamSize","TotalSize","VersionSize"'
     }
     
     $siteCollectionReportLines  = @();
-    foreach($sitecollection in $sitecollections){
+    foreach($sitecollection in $siteCollections){
         WriteInfoLog "Begin scan the site collection $($sitecollection.URL)"
-        $siteCollectionReportLine = ScanSiteCollection tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL
+        $siteCollectionReportLine = ScanSiteCollection -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL
         $siteCollectionReportLines += $siteCollectionReportLine;
         WriteInfoLog "Finished scan the site collection $($sitecollection.URL)"
     }

@@ -7,7 +7,7 @@
 # Last Modified Date:      2023/10/13
 #=====================================================================================================================
 
-$outputCsv = "appdetails.csv"
+$outputCsv = "Appdetails.csv"
 
 # Check if CSV exists and delete it if it does
 if (Test-Path $outputCsv) {
@@ -29,8 +29,6 @@ Connect-AzureAD
 # 3. Check if the application already exists
 $appName = "AvePointQuickScan"
 $app = Get-AzureADApplication -Filter "DisplayName eq '$appName'"
-
-
 
 if (-not $app) {
 # Create the Azure App without permissions first
