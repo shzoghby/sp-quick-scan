@@ -20,8 +20,8 @@ $thumbprint = $csvData.Thumbprint.Trim()
 #Variable Prompts
 #========================================================
 # Prompt for SharePoint credentials and Tenant information
-$Tenant = Read-Host -Prompt "Please enter your tenant name (e.g., yourdomain.onmicrosoft.com)"
-$TenantD = Read-Host -Prompt "Please enter your tenant Domain prefix (e.g., yourdomain)"
+$tenantFullName = Read-Host -Prompt "Please enter your tenant full name (e.g., yourdomain.onmicrosoft.com)";
+$tenantBase = $tenantFullName.SubString(0,$tenantFullName.IndexOf('.'));
 
 
 #========================================================
@@ -31,11 +31,12 @@ $pageSize=500
 $execPath = Split-Path $MyInvocation.MyCommand.Path -parent
 $jobId=[DateTime]::Now.ToString("yyyyMMddHHmmss")
 $jobFolder=Join-Path $execPath $jobId
-$outFileName =[System.String]::Format("Report_{0}.csv",[System.DateTime]::Now.ToString("yyyyMMddhhmmss"))
-$outFilePath = Join-Path $jobFolder $outFileName
-$inputFileName="sitecollection.csv"
-$inputFilePath=Join-Path $execPath $inputFileName
-$scopeSiteCollectionsFilePath=Join-Path $execPath 'scopeSIteCOllectionbs.csv'
+
+$inputFileName="input-sitecollections.csv";
+$inputFilePath=Join-Path $execPath $inputFileName;
+
+$outFileName = [System.String]::Format("Report_{0}.csv",[System.DateTime]::Now.ToString("yyyyMMddhhmmss"));
+$outFilePath = Join-Path $jobFolder $outFileName;
 
 #========================================================
 #Functions module
@@ -51,7 +52,7 @@ catch
 }
 
 #========================================================
-#Log module
+#Log directory
 #=======================================================
 try
 {
@@ -74,30 +75,33 @@ Install-RequiredModules
 Import-Module PnP.PowerShell -ErrorAction SilentlyContinue # Ensure the PnP module is imported
 
 #========================================================
-#Retrieve SIte COllections
+#Retrieve Site Collections
 #=======================================================
-Get-SiteCollections -tenant $TenantD
+$siteCollections = GetSitecollections -tenantFullName $tenantFullName -tenantBase $-tenantBase -inputFilePath $inputFilePath
 
 #========================================================
 #Main Run
 #=======================================================
 try 
 {
-     
-        $startTime=Get-Date
-        WriteInfoLog "The job is running on $($startTime)."
-        if([System.IO.Directory]::Exists($jobFolder) -eq $false){
-            [System.IO.Directory]::CreateDirectory($jobFolder) | Out-Null
-            WriteReport '"SiteCollection","Site","List","LastModified","TotalFileCount","TotalFileStreamSize","TotalSize","VersionSize"'
-        }
-        $sitecollections=Import-Csv -Path $inputFilePath 
-        foreach($sitecollection in $sitecollections){
-            WriteInfoLog "Begin scan the site collection $($sitecollection.URL)"
-            ScanSiteCollection $sitecollection.URL
-            WriteInfoLog "Finished scan the site collection $($sitecollection.URL)"
-        }
-        WriteInfoLog "The job is finished on $(Get-Date)."
+    $startTime=Get-Date
+    WriteInfoLog "The job is running on $($startTime)."
+    if([System.IO.Directory]::Exists($jobFolder) -eq $false){
+        [System.IO.Directory]::CreateDirectory($jobFolder) | Out-Null
+        WriteReport '"SiteCollection","Site","List","LastModified","TotalFileCount","TotalFileStreamSize","TotalSize","VersionSize"'
     }
-    catch {
-        WriteErrorLog "An error occurred while exporting the stroage of the excel.Exception:$($_)"   
+    
+    $siteCollectionReportLines  = @();
+    foreach($sitecollection in $sitecollections){
+        WriteInfoLog "Begin scan the site collection $($sitecollection.URL)"
+        $siteCollectionReportLine = ScanSiteCollection tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL
+        $siteCollectionReportLines += $siteCollectionReportLine;
+        WriteInfoLog "Finished scan the site collection $($sitecollection.URL)"
     }
+    $report|Out-File -FilePath $outFilePath -Append -Encoding utf8
+    $siteCollectionReportLines | Export-Csv -Path $outFilePath
+    WriteInfoLog "The job is finished on $(Get-Date)."
+}
+catch {
+    WriteErrorLog "An error occurred while exporting the stroage of the excel.Exception:$($_.Exception)"   
+}
