@@ -122,7 +122,7 @@ function WriteErrorLog($message) {
 #=======================================================================
 function Install-RequiredModules {
     # Array of required modules
-    $requiredModules = @('PnP.PowerShell', 'AzureAD', 'ExchangeOnlineManagement')
+    $requiredModules = @('PowerShellGet', 'PnP.PowerShell', 'AzureAD', 'ExchangeOnlineManagement')
 
     foreach ($module in $requiredModules) {
         # Check if the module is installed

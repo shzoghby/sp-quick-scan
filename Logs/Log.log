@@ -1,7 +1,0 @@
-﻿2023/10/19 02:37:37:477    MessageTrace    Info    The job is running on 10/19/2023 02:37:37.
-2023/10/19 02:37:43:418    MessageTrace    Info    Begin scan the site collection https://engage2syddev.sharepoint.com/sites/MMR2021000012
-2023/10/19 02:37:45:251    MessageTrace    Info    Begin scan the web https://engage2syddev.sharepoint.com/sites/MMR2021000012
-2023/10/19 02:37:45:459    MessageTrace    Info    Begin check the list Documents
-2023/10/19 02:37:52:679    MessageTrace    Warning    An error occurred while exporting the list Documents.Exception:The term 'Get-PnPFolderStorageMetric' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
-2023/10/19 02:37:52:820    MessageTrace    Info    Finished scan the site collection https://engage2syddev.sharepoint.com/sites/MMR2021000012
-2023/10/19 02:37:52:821    MessageTrace    Info    Begin scan the site collection https://engage2syddev.sharepoint.com/sites/MRD202100001
