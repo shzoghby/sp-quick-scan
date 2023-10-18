@@ -40,7 +40,6 @@ $scopeSiteCollectionsFilePath=Join-Path $execPath 'scopeSIteCOllectionbs.csv'
 #========================================================
 #Functions module
 #=======================================================
-
 try
 {
     . .\_functions.ps1
@@ -82,7 +81,8 @@ Get-SiteCollections -tenant $TenantD
 #========================================================
 #Main Run
 #=======================================================
-try {
+try 
+{
      
         $startTime=Get-Date
         WriteInfoLog "The job is running on $($startTime)."
