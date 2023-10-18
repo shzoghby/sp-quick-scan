@@ -73,8 +73,9 @@ Install-RequiredModules
 try
 {
     Import-Module Microsoft.Online.SharePoint.PowerShell -DisableNameChecking | out-null
-    Import-Module PnP.PowerShell -DisableNameChecking | out-null
-}
+    #Import-Module PnP.PowerShell -DisableNameChecking | out-null
+    "$PSScriptRoot\bin\*" | gci -include '*.psm1','*.ps1' | Import-Module | out-null
+ }
 catch
 {
     Write-Error "Could not load required assemblies"

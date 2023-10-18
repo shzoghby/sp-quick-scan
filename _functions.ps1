@@ -127,17 +127,18 @@ function Install-RequiredModules {
     foreach ($module in $requiredModules) {
         # Check if the module is installed
         if (Get-Module -ListAvailable -Name $module) {
-            Write-Host "$module module is already installed, it will be uninstalled now." -ForegroundColor Green
-            Uninstall-Module $module -Force
+            Write-Host "$module module is already installed." -ForegroundColor Green
+            #Uninstall-Module $module -Force
         }
-        
+       else
+        {
             # Prompt the user if they wish to install the module
             $install = Read-Host -Prompt "$module is not installed. Do you want to install it now? (yes/no)"
 
             if ($install -eq "yes") {
                 try {
                     Install-Module -Name $module -AllowClobber -Scope CurrentUser -Force -Confirm:$false
-                    Save-Module PnP.PowerShell -Repository PSGallery -Path "$PSScriptRoot\bin\Modules" -Force
+                    Save-Module $module -Repository PSGallery -Path "$PSScriptRoot\bin\Modules" -Force
                     Write-Host "$module module has been installed successfully!" -ForegroundColor Green
                 }
                 catch {
@@ -149,6 +150,7 @@ function Install-RequiredModules {
                 Write-Host "The script cannot proceed without $module. Exiting..." -ForegroundColor Red
                 exit
             }
+        }
     }
 }
 
