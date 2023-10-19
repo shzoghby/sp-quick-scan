@@ -218,6 +218,29 @@ function getDateTimeFilter {
         return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>"
     }
 }
+
+function GetFilesLastAccessedDate {
+    param (
+        [string]$sitecollectionUrl,
+        [string]$webUrl,
+        [string]$listTitle,
+        [string]$listRootFolder,
+        [string]$listId,
+        [string]$dayOrMonthOrYear,
+        [int]$number
+    )
+    {
+        $libraryUrl = '/sites/YourSite/LibraryName/'
+        $auditData = Get-PnPAuditLog -Query "<Query><Where><And><Eq><FieldRef Name='FileDirRef'/><Value Type='Text'>$libraryUrl</Value></Eq><Eq><FieldRef Name='Event' /><Value Type='String'>View</Value></Eq></And></Where></Query>"
+        foreach ($entry in $auditData) 
+        {
+            $fileUrl = $entry.ItemUrl
+            $lastAccessedDate = $entry.Occurred
+            Write-Host "File URL: $fileUrl, Last Consultation Date: $lastAccessedDate"
+        }
+    }
+}
+
 function ScanFiles {
     param (
         [string]$sitecollectionUrl,

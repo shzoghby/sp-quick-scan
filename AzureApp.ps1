@@ -46,15 +46,23 @@ if ($app -ne $null) {
     Start-Sleep -Seconds 10
     # Retrieve the Service Principal for SharePoint Online
     $spOnline = Get-AzureADServicePrincipal -Filter "AppId eq '00000003-0000-0ff1-ce00-000000000000'"
+    $spOM365Management = Get-AzureADServicePrincipal -Filter "AppId eq '00000003-0000-0ff1-ce00-000000000000'"
 
     # Check if the permission already exists
-    $existingPermission = Get-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipal.ObjectId | Where-Object {$_.ResourceId -eq $spOnline.ObjectId}
+    $existingSpOnlinePermission = Get-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipal.ObjectId | Where-Object {$_.ResourceId -eq $spOnline.ObjectId}
+    $existingM365managementPermission = Get-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipal.ObjectId | Where-Object {$_.ResourceId -eq $spOM365Management.ObjectId}
 
     
     # Grant Full Control permission to SharePoint Online if not already granted
-    if (-not $existingPermission) {
+    if (-not $existingSpOnlinePermission) {
     $fullControlPermission = $spOnline.AppRoles | Where-Object {$_.Value -eq "Sites.FullControl.All"}
     New-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipal.ObjectId -PrincipalId $servicePrincipal.ObjectId -Id $fullControlPermission.Id -ResourceId $spOnline.ObjectId
+    }
+
+    # Grant ActivityFeed.Read permission to Microsoft Office 365 Management API if not already granted
+    if (-not $existingM365managementPermission) {
+    $ActivityReadPermission = $spOnline.AppRoles | Where-Object {$_.Value -eq "ActivityFeed.Read"}
+    New-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipal.ObjectId -PrincipalId $servicePrincipal.ObjectId -Id $ActivityReadPermission.Id -ResourceId $spOM365Management.ObjectId
     }
 
     # Add the required permissions to the Azure AD app
