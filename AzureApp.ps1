@@ -7,7 +7,7 @@
 # Last Modified Date:      2023/10/13
 #=====================================================================================================================
 
-$outputCsv = "Appdetails.csv"
+$outputCsv = "appdetails.csv"
 
 # Check if CSV exists and delete it if it does
 if (Test-Path $outputCsv) {
