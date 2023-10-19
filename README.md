@@ -25,7 +25,7 @@ The PowerShell script can be used to run on target site collections to create a 
   | inputFileName  | no | null | enter name of site collections input file or press enter to scan the whole tenant (e.g., input-sitecollections.csv) |
   | reportLevel  | no | null | enter report level needed (allowed values:listLevel or fileLevel)|
   | dayOrMonthOrYear  | no | day | enter day/month/year condition to use for files (allowed values:day or month or year) |
-  | number  | no | 30 | 30 | enter number of day/month/year for condition (e.g., 30) |
+  | number  | no | 30 |  enter number of day/month/year for condition (e.g., 30) |
 
 3. Once the script run is completed successfully, you should have an CSV file created with name *Report_<yyyyMMddhhmmss>_listLevel* or *Report_<yyyyMMddhhmmss>_fileLevel*
    
