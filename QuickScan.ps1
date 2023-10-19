@@ -8,9 +8,13 @@
 #=====================================================================================================================
 param(
     [string] $tenantFullName = "engage2syddev.onmicrosoft.com",
-    #$(Read-Host -Prompt "Please enter your tenant full name (e.g., yourdomain.onmicrosoft.com)"),
-    #[string] $inputFileName = $(Read-Host -Prompt "Please enter name of site collections input file or press enter to scan the whole tenant (e.g., input-sitecollections.csv)")
-    [string] $inputFileName = "input-sitecollections.csv"
+    [string] $inputFileName = "input-sitecollections.csv",
+    [string] $reportLevel [ValidateSet("LibraryLevel","FileLevel")]
+    <#
+    [string] $tenantFullName = $(Read-Host -Prompt "Please enter your tenant full name (e.g., yourdomain.onmicrosoft.com)"),
+    [string] $inputFileName = $(Read-Host -Prompt "Please enter name of site collections input file or press enter to scan the whole tenant (e.g., input-sitecollections.csv)")
+    [string] $reportLevel [ValidateSet("LibraryLevel","FileLevel")] = $(Read-Host -Prompt "Please enter report level needed (e.g., LibraryLevel or FileLevel)")
+    #>
 )
 
 $csvData = Import-Csv -Path ".\Appdetails.csv"
@@ -32,7 +36,7 @@ $jobFolder=Join-Path $execPath $jobId
 $inputFileName="input-sitecollections.csv";
 $inputFilePath=Join-Path $execPath $inputFileName;
 
-$outFileName = [System.String]::Format("Report_{0}.csv",[System.DateTime]::Now.ToString("yyyyMMddhhmmss"));
+$outFileName = [System.String]::Format("Report_{0}_{1}.csv",[System.DateTime]::Now.ToString("yyyyMMddhhmmss"),$reportLevel);
 $outFilePath = Join-Path $jobFolder $outFileName;
 
 #========================================================
@@ -101,7 +105,7 @@ try
     $siteCollectionReportLines  = @();
     foreach($sitecollection in $siteCollections){
         WriteInfoLog "Begin scan the site collection $($sitecollection.URL)"
-        $siteCollectionReportLine = ScanSiteCollection -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL
+        $siteCollectionReportLine = ScanSiteCollection -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL -reportLevel $reportLevel
         $siteCollectionReportLines += $siteCollectionReportLine;
         WriteInfoLog "Finished scan the site collection $($sitecollection.URL)"
     }

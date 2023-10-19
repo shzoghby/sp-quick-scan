@@ -186,6 +186,48 @@ function GetSitecollections {
     Write-Host "Done fetching site collection details."
 }
 
+function getDateTimeFilter ()
+{
+    $days = 30 #No of days - Get files edited in last 30 days
+    return (Get-Date).Adddays(-($Days));
+}
+function ScanFiles {
+    param (
+        [string]$sitecollectionUrl,
+        [string]$webUrl,
+        [string]$listTitle,
+        [string]$listRootFolder,
+        [string]$listId
+    )
+
+    $allFiles = @() # Result array to keep all file details
+    WriteInfoLog "Begin check the list $($listTitle)"
+    $dateTimeFilter = GetDateTimeFilter
+    $ListItems = Get-PnPListItem -List $listTitle -PageSize 1000 | Where {$_.LastModifiedTime  -gt $dateTimeFilter}
+    #Enumerate all list items to get file details
+    ForEach($Item in $ListItems)
+    {
+        #Add file details to Result array
+        $allFiles += New-Object PSObject -property $([ordered]@{
+            SitecollectionUrl   = $sitecollectionUrl;
+            WebUrl              = $webUrl;
+            ListTitle           = $listTitle;
+            FileName  = $Item.FieldValues["FileLeafRef"]            
+            FileID = $Item.FieldValues["UniqueId"]
+            FileType = $Item.FieldValues["File_x0020_Type"]
+            RelativeURL = $Item.FieldValues["FileRef"]
+            CreatedByEmail = $Item.FieldValues["Author"].Email
+            CreatedTime   = $Item.FieldValues["Created"]
+            LastModifiedTime   = $Item.FieldValues["Modified"]
+            ModifiedByEmail  = $Item.FieldValues["Editor"].Email
+            FileSize_MB = [Math]::Round(($Item.FieldValues["File_x0020_Size"]/1024/1024), 2) #File size in MB
+        })
+
+    }
+    
+    WriteInfoLog "Finished scan files in the list $($listTitle)"
+    return $allFiles;
+}
 
 function ScanLists {
     param (
@@ -197,7 +239,7 @@ function ScanLists {
     )
 
     $listReturnObject = $null
-    WriteInfoLog "Begin check the list $($listTitle)"
+    WriteInfoLog "Begin check files in the list $($listTitle)"
     $storage = Get-PnPFolderStorageMetric -FolderSiteRelativeUrl $listRootFolder
     if ($null -ne $storage) {
         if ($storage.TotalFileCount -eq 0) {
@@ -251,7 +293,8 @@ function ScanWebs {
         [string]$thumbprint,
         [string]$webId,
         [string]$webUrl,
-        [string]$sitecollectionUrl
+        [string]$sitecollectionUrl,
+        [string]$reportLevel
     )
     $listReportLines = New-Object 'System.Collections.Generic.List[PSCustomObject]'
     $web = Get-PnPWeb -Identity $webId
@@ -263,19 +306,30 @@ function ScanWebs {
     foreach ($list in $lists) {
         try {
             $folderName = $list.RootFolder.ServerRelativeUrl.Replace($web.ServerRelativeUrl, "")          
-            if ($folderName -eq "/Style Library") {
+            if ($folderName -eq "/Style Library" -or $folderName -eq "/FormServerTemplates") {
                 continue;
             }
-            if ($folderName -eq "/FormServerTemplates") {
-                continue;
+            
+            if($reportLevel -eq "libraryLevel" -or $reportLevel -eq $null)
+            {
+                $returnObject = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id;
+                if ($null -ne $returnObject) {              
+                    $listReportLines.Add($returnObject[$returnObject.length-1]);
+                }
+                else {
+                    WriteWarnLog "The report line of the list $($list.Title) is null" 
+                }
+            }
+            else
+            {
+                $returnObject = ScanFiles -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id;
+                if ($null -ne $returnObject) {              
+                    $listReportLines.Add($returnObject[$returnObject.length-1]);
+                }
+                else {
+                    WriteWarnLog "The report line of the list $($list.Title) is null" 
+                }
             } 
-            $listReturnObject = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id
-            if ($null -ne $listReturnObject) {              
-                $listReportLines.Add($listReturnObject[$listReturnObject.length-1]);
-            }
-            else {
-                WriteWarnLog "The report line of the list $($list.Title) is null" 
-            }
         }
         catch {
             WriteWarnLog "An error occurred while exporting the list $($list.Title).Exception:$($_)" 
@@ -293,7 +347,8 @@ function ScanSiteCollection {
         [string]$tenantFullName,
         [string]$clientId,
         [string]$thumbprint,
-        [string]$url
+        [string]$url,
+        [string]$reportLevel
     )
     try {
         $webReportLines = New-Object 'System.Collections.Generic.List[PSCustomObject]'
@@ -301,11 +356,11 @@ function ScanSiteCollection {
         Connect-PnPOnline -Url $url -ClientId $clientId -Thumbprint $thumbprint -Tenant $tenantFullName
 
         $rootWeb = Get-PnPWeb
-        $webReportLines = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $rootWeb.Id -webUrl $rootWeb.Url -sitecollectionUrl $url
+        $webReportLines = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $rootWeb.Id -webUrl $rootWeb.Url -sitecollectionUrl $url -reportLevel $reportLevel
         $webs = Get-PnPSubWeb -Recurse;
         foreach ($web in $webs) {
             try {
-                $webReportLine = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $web.Id -webUrl $web.Url -sitecollectionUrl $url
+                $webReportLine = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $web.Id -webUrl $web.Url -sitecollectionUrl $url -reportLevel $reportLevel
                 $webReportLines.Add($webReportLine)
             }
             catch {
