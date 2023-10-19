@@ -4,7 +4,7 @@ The PowerShell script can be used to run on target site collections to create a 
 
 ## How To Use
 
-# Create Azure App
+### Create Azure App
 
 1. Clone or download the files here into your local folder
 2. Open PowerShell IDE, as an administrator & navigate to the folder downloaded
@@ -14,7 +14,7 @@ The PowerShell script can be used to run on target site collections to create a 
 ![](README/azure-app.png)
 ![](README/app-details-csv.png)
 
-# Run QuickScan
+### Run QuickScan
 
 1. Open PowerShell IDE, as an administrator & navigate to the folder downloaded
 2. Open *QuickScan.ps1* file & run it, the file will ask for some paramaters to provide (see table below 
