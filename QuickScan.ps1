@@ -7,14 +7,41 @@
 # Last Modified Date:      2023/10/13
 #=====================================================================================================================
 param(
+<#
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
     [string] $tenantFullName = "engage2syddev.onmicrosoft.com",
-    [string] $inputFileName = "input-sitecollections.csv",
-    [string] $reportLevel [ValidateSet("LibraryLevel","FileLevel")]
-    <#
+
+    [Parameter(Mandatory = $false)]
+    [string] $inputFileName = "",
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('listLevel', 'fileLevel')]
+    [string] $reportLevel = "listLevel",
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('day', 'month','year')]
+    [string] $dayOrMonthOrYear = "day",
+
+    [Parameter(Mandatory = $false)]
+    [int] $number = 100
+#>
+    [Parameter(Mandatory = $true)]
     [string] $tenantFullName = $(Read-Host -Prompt "Please enter your tenant full name (e.g., yourdomain.onmicrosoft.com)"),
-    [string] $inputFileName = $(Read-Host -Prompt "Please enter name of site collections input file or press enter to scan the whole tenant (e.g., input-sitecollections.csv)")
-    [string] $reportLevel [ValidateSet("LibraryLevel","FileLevel")] = $(Read-Host -Prompt "Please enter report level needed (e.g., LibraryLevel or FileLevel)")
-    #>
+
+    [Parameter(Mandatory = $false)]
+    [string] $inputFileName = $(Read-Host -Prompt "Please enter name of site collections input file or press enter to scan the whole tenant (e.g., input-sitecollections.csv)"),
+    
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('listLevel', 'fileLevel')]
+    [string] $reportLevel = $(Read-Host -Prompt "Please enter report level needed (allowed values:listLevel or fileLevel)"),
+    
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('day', 'month','year')]
+    [string] $dayOrMonthOrYear = $(Read-Host -Prompt "Please enter day/month/year condition to use for files (allowed values:day or month or year)"),
+    
+    [Parameter(Mandatory = $false)]
+    [string] $number = $(Read-Host -Prompt "Please enter number of day/month/year for condition (e.g., 30)")
 )
 
 $csvData = Import-Csv -Path ".\Appdetails.csv"
@@ -33,8 +60,11 @@ $execPath = Split-Path $MyInvocation.MyCommand.Path -parent
 $jobId=[DateTime]::Now.ToString("yyyyMMddHHmmss")
 $jobFolder=Join-Path $execPath $jobId
 
-$inputFileName="input-sitecollections.csv";
+#$inputFileName="input-sitecollections.csv";
+$inputFilePath = $null;
+if($inputFileName) {
 $inputFilePath=Join-Path $execPath $inputFileName;
+}
 
 $outFileName = [System.String]::Format("Report_{0}_{1}.csv",[System.DateTime]::Now.ToString("yyyyMMddhhmmss"),$reportLevel);
 $outFilePath = Join-Path $jobFolder $outFileName;
@@ -105,9 +135,9 @@ try
     $siteCollectionReportLines  = @();
     foreach($sitecollection in $siteCollections){
         WriteInfoLog "Begin scan the site collection $($sitecollection.URL)"
-        $siteCollectionReportLine = ScanSiteCollection -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL -reportLevel $reportLevel
+        $siteCollectionReportLine = ScanSiteCollection -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL -reportLevel $reportLevel -dayOrMonthOrYear $dayOrMonthOrYear -number $number;
         $siteCollectionReportLines += $siteCollectionReportLine;
-        WriteInfoLog "Finished scan the site collection $($sitecollection.URL)"
+        WriteInfoLog "Finished scan the site collection $($sitecollection.URL)" -ForegroundColor Green
     }
     $siteCollectionReportLines | Export-Csv -Path $outFilePath
     WriteInfoLog "The job is finished on $(Get-Date)."
