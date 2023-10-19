@@ -12,7 +12,7 @@ The PowerShell script can be used to run on target site collections to create a 
 4. Once the script run is completed successfully, you should have an Azure App *AvePointQuickScan* created & a *appdetails.csv* csv file (see screen shot below)
 
 ![](README/azure-app.png)
-![](README/app-details.png)
+![](README/app-details-csv.png)
 
 # Run QuickScan
 
