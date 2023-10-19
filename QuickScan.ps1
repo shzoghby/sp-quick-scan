@@ -74,7 +74,7 @@ try
 {
     #Import-Module Microsoft.Online.SharePoint.PowerShell -DisableNameChecking | out-null
     #Import-Module PnP.PowerShell -DisableNameChecking | out-null
-    "$PSScriptRoot\bin\*" | gci -include '*.psm1','*.ps1' | Import-Module | out-null
+    #"$PSScriptRoot\bin\*" | gci -include '*.psm1','*.ps1' | Import-Module -DisableNameChecking | out-null
  }
 catch
 {
@@ -105,7 +105,6 @@ try
         $siteCollectionReportLines += $siteCollectionReportLine;
         WriteInfoLog "Finished scan the site collection $($sitecollection.URL)"
     }
-    $report|Out-File -FilePath $outFilePath -Append -Encoding utf8
     $siteCollectionReportLines | Export-Csv -Path $outFilePath
     WriteInfoLog "The job is finished on $(Get-Date)."
 }

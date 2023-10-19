@@ -128,10 +128,8 @@ function Install-RequiredModules {
         # Check if the module is installed
         if (Get-Module -ListAvailable -Name $module) {
             Write-Host "$module module is already installed." -ForegroundColor Green
-            #Uninstall-Module $module -Force
         }
-       else
-        {
+        else {
             # Prompt the user if they wish to install the module
             $install = Read-Host -Prompt "$module is not installed. Do you want to install it now? (yes/no)"
 
@@ -198,37 +196,52 @@ function ScanLists {
         [string]$listId
     )
 
+    $listReturnObject = $null
     WriteInfoLog "Begin check the list $($listTitle)"
     $storage = Get-PnPFolderStorageMetric -FolderSiteRelativeUrl $listRootFolder
     if ($null -ne $storage) {
         if ($storage.TotalFileCount -eq 0) {
             WriteInfoLog "Finished check the empty list $($listTitle)."
-            return [System.String]::Format('"{0}","{1}","{2}","{3}","{4}","{5}"', $listTitle, $storage.LastModified, $storage.TotalFileCount, "0", "0", "0")
-        }
-        [decimal]$totalsize = 0;
-        [decimal]::TryParse($storage.TotalSize, [ref]$totalsize);
-        [decimal]$currentVersionsize = 0;
-        [decimal]::TryParse($storage.TotalFileStreamSize, [ref]$currentVersionsize);
-        [decimal]$versionSize = $totalsize - $currentVersionsize;
-        WriteInfoLog "Finished scan the list $($listTitle)"
-        #return [System.String]::Format('"{0}","{1}","{2}","{3}","{4}","{5}"',$listTitle,$storage.LastModified,$storage.TotalFileCount,$storage.TotalFileStreamSize/1024/1024,$storage.TotalSize/1024/1024,$versionSize/1024/1024);
 
-        $reportObj = new-object psobject
-        $reportObj | add-member ListTitle $sitecollectionUrl
-        $reportObj | add-member ListTitle $webUrl
-        $reportObj | add-member ListTitle $listTitle
-        $reportObj | add-member LastModified $($storage.LastModified)
-        $reportObj | add-member TotalFileCount $($storage.TotalFileCount)
-        $reportObj | add-member TotalFileStreamSize $($storage.TotalFileStreamSize / 1024 / 1024)
-        $reportObj | add-member TotalSize $($storage.TotalSize / 1024 / 1024)
-        $reportObj | add-member versionSize $($versionSize / 1024 / 1024)
-        return $reportObj;
+            $listReturnObject = [PSCustomObject]@{
+                SitecollectionUrl   = $sitecollectionUrl;
+                WebUrl              = $webUrl;
+                ListTitle           = $listTitle;
+                LastModified        = $storage.LastModified;
+                TotalFileCount      = 0;
+                TotalFileStreamSize = 0;
+                TotalSize           = 0;
+                VersionSize         = 0;
+            };
+
+            #return [System.String]::Format('"{0}","{1}","{2}","{3}","{4}","{5}"', $listTitle, $storage.LastModified, $storage.TotalFileCount, "0", "0", "0")
+        }
+        else {
+            [decimal]$totalsize = 0;
+            [decimal]::TryParse($storage.TotalSize, [ref]$totalsize);
+            [decimal]$currentVersionsize = 0;
+            [decimal]::TryParse($storage.TotalFileStreamSize, [ref]$currentVersionsize);
+            [decimal]$versionSize = $totalsize - $currentVersionsize;
+            WriteInfoLog "Finished scan the list $($listTitle)"
+            #return [System.String]::Format('"{0}","{1}","{2}","{3}","{4}","{5}"',$listTitle,$storage.LastModified,$storage.TotalFileCount,$storage.TotalFileStreamSize/1024/1024,$storage.TotalSize/1024/1024,$versionSize/1024/1024);
+
+            $listReturnObject = [PSCustomObject]@{
+                SitecollectionUrl   = $sitecollectionUrl;
+                WebUrl              = $webUrl;
+                ListTitle           = $listTitle;
+                LastModified        = $storage.LastModified;
+                TotalFileCount      = $($storage.TotalFileCount);
+                TotalFileStreamSize = $($storage.TotalFileStreamSize / 1024 / 1024);
+                TotalSize           = $($storage.TotalSize / 1024 / 1024);
+                VersionSize         = $($versionSize / 1024 / 1024);
+            };
+        }
     }
     else {
         WriteInfoLog "Finished check the list $($listTitle) with empty storage."
     }
-    
-    return "";
+
+    return $listReturnObject;
 }
 
 function ScanWebs {
@@ -237,9 +250,10 @@ function ScanWebs {
         [string]$clientId,
         [string]$thumbprint,
         [string]$webId,
+        [string]$webUrl,
         [string]$sitecollectionUrl
     )
-    $listReportLines = @();
+    $listReportLines = New-Object 'System.Collections.Generic.List[PSCustomObject]'
     $web = Get-PnPWeb -Identity $webId
     # Use our new connection function
     # Connect to the web
@@ -255,9 +269,9 @@ function ScanWebs {
             if ($folderName -eq "/FormServerTemplates") {
                 continue;
             } 
-            $listReportEntry = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id
-            if ($null -ne $listReportEntry) {              
-                $listReportLines += $listReportEntry;
+            $listReturnObject = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id
+            if ($null -ne $listReturnObject) {              
+                $listReportLines.Add($listReturnObject[$listReturnObject.length-1]);
             }
             else {
                 WriteWarnLog "The report line of the list $($list.Title) is null" 
@@ -282,16 +296,17 @@ function ScanSiteCollection {
         [string]$url
     )
     try {
-        $webReportLines = @();
+        $webReportLines = New-Object 'System.Collections.Generic.List[PSCustomObject]'
         # Connect to the specific site collection with MFA
         Connect-PnPOnline -Url $url -ClientId $clientId -Thumbprint $thumbprint -Tenant $tenantFullName
 
         $rootWeb = Get-PnPWeb
-        $webReportLines = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $rootWeb.Id -sitecollectionUrl $url
+        $webReportLines = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $rootWeb.Id -webUrl $rootWeb.Url -sitecollectionUrl $url
         $webs = Get-PnPSubWeb -Recurse;
         foreach ($web in $webs) {
             try {
-                $webReportLines += ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $web.Id -sitecollectionUrl $url
+                $webReportLine = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $web.Id -webUrl $web.Url -sitecollectionUrl $url
+                $webReportLines.Add($webReportLine)
             }
             catch {
                 WriteErrorLog "An error occurred while scanning the site collection $($url).Exception:$($_.Exception)"
