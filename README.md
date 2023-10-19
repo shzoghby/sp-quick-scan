@@ -1,0 +1,1 @@
+<View Scope='Recursive'><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='30'/></Value></Geq></Where></Query></View>
