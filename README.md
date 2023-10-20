@@ -4,6 +4,14 @@ The PowerShell script can be used to run on target site collections to create a 
 
 ## How To Use
 
+### Enable Auditing (only if youw ant to scan files with last accessed date)
+We must turn ON the audit logs feature in the Compliance Center before you access the audit logs for SharePoint Online. Follow these steps:
+1. Log in to the Microsoft Office 365 admin center with Global Administrator permissions: https://admin.microsoft.com
+2. Click on the “Show All” link and then “Compliance” under admin Centers in the left navigation.
+3. In the Compliance center, click on the “Audit” link in the left navigation >>  Click on the “Start recording user and admin activity” button and give it a minute to complete. In case, you don’t see this link or button, that means auditing is already turned ON.
+
+![](README/enable-audit.png)
+
 ### Create Azure App
 
 1. Clone or download the files here into your local folder

@@ -194,28 +194,68 @@ function GetSitecollections {
     Write-Host "Done fetching site collection details." -ForegroundColor Green
 }
 
-function getDateTimeFilter {
+function getLastModifiedDateQuery {
     param (
-        [string]$dayOrMonthOrYear,
-        [int]$number
+        [string]$lastModifiedDayOrMonthOrYear
     )
+
+    $dayOrMonthOrYear = $lastModifiedDayOrMonthOrYear.SubString(0, $lastModifiedDayOrMonthOrYear.IndexOf(":"));
+    $number = $lastModifiedDayOrMonthOrYear.SubString($lastModifiedDayOrMonthOrYear.IndexOf(":"), $lastModifiedDayOrMonthOrYear.length);
+
+    if($null -eq $lastModifiedDayOrMonthOrYear -or '' -eq $lastModifiedDayOrMonthOrYear)
+    {
+        $number = 30;
+        $dayOrMonthOrYear = 'day';
+    }
 
     if($null -eq $number -or '' -eq $number)
     {
         $number = 30;
     }
+
+    if($null -eq $dayOrMonthOrYear -or '' -eq $dayOrMonthOrYear)
+    {
+        $dayOrMonthOrYear = 'day';
+    }
     
-    if ($dayOrMonthOrYear -eq 'day') {
-        return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>"
+    switch($dayOrMonthOrYear)
+    {
+        'day' return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>"
+        'month' return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetMonths='-$number'/></Value></Geq></Where></Query></View>"
+        'year' return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetYears='-$number'/></Value></Geq></Where></Query></View>"
+        default return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>"
     }
-    elseif ($dayOrMonthOrYear -eq 'month') {
-        return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetMonths='-$number'/></Value></Geq></Where></Query></View>"
+}
+
+function getLastAccessedDateTimeFilter {
+    param (
+        [string]$lastAccessedDayOrMonthOrYear
+    )
+    $dayOrMonthOrYear = $lastAccessedDayOrMonthOrYear.SubString(0, $lastAccessedDayOrMonthOrYear.IndexOf(":"));
+    $number = $lastAccessedDayOrMonthOrYear.SubString($lastAccessedDayOrMonthOrYear.IndexOf(":"), $lastAccessedDayOrMonthOrYear.length);
+
+    if($null -eq $lastAccessedDayOrMonthOrYear -or '' -eq $lastAccessedDayOrMonthOrYear)
+    {
+        $number = 30;
+        $dayOrMonthOrYear = 'day';
     }
-    elseif ($dayOrMonthOrYear -eq 'year') {
-        return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetYears='-$number'/></Value></Geq></Where></Query></View>"
+
+    if($null -eq $number -or '' -eq $number)
+    {
+        $number = 30;
     }
-    else {
-        return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>"
+
+    if($null -eq $dayOrMonthOrYear -or '' -eq $dayOrMonthOrYear)
+    {
+        $dayOrMonthOrYear = 'day';
+    }
+
+    switch($dayOrMonthOrYear)
+    {
+        'day' return (Get-Date).AddDays(-$number)
+        'month' return (Get-Date).AddMonths(-$number)
+        'year' return (Get-Date).AddYears(-$number)
+        default return (Get-Date).AddDays(-$number)
     }
 }
 
@@ -223,38 +263,61 @@ function GetFilesLastAccessedDate {
     param (
         [string]$sitecollectionUrl,
         [string]$webUrl,
-        [string]$listTitle,
-        [string]$listRootFolder,
-        [string]$listId,
-        [string]$dayOrMonthOrYear,
-        [int]$number
+        [string] $fileRelativeUrl,
+        [string]$lastAccessedDayOrMonthOrYear
     )
     {
-        $libraryUrl = '/sites/YourSite/LibraryName/'
-        $auditData = Get-PnPAuditLog -Query "<Query><Where><And><Eq><FieldRef Name='FileDirRef'/><Value Type='Text'>$libraryUrl</Value></Eq><Eq><FieldRef Name='Event' /><Value Type='String'>View</Value></Eq></And></Where></Query>"
-        foreach ($entry in $auditData) 
-        {
-            $fileUrl = $entry.ItemUrl
-            $lastAccessedDate = $entry.Occurred
-            Write-Host "File URL: $fileUrl, Last Consultation Date: $lastAccessedDate"
-        }
+        $fileAbsoluteURL = `$webUrl.SubString(0,$webUrl.IndexOf("/sites"))$fileRelativeUrl`
+        WriteInfoLog "Begin get file last accessed date for file $($fileRelativeUrl)"
+
+        #Set Dates
+        $startDate = getLastAccessedDateTimeFilter -lastAccessedDayOrMonthOrYear $lastAccessedDayOrMonthOrYear
+        $endDate = (Get-Date)
+        
+        #Search Unified Log
+        #$AuditLog = Search-UnifiedAuditLog -StartDate $StartDate -EndDate $EndDate -ResultSize 5000
+        $auditLog = Search-UnifiedAuditLog -StartDate $startDate -EndDate $endDate -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet -ObjectIds $fileAbsoluteURL
+        $auditLogResults = $auditLog.AuditData | ConvertFrom-Json | select CreationTime, UserID, Operation, ClientIP, ObjectID
+        
+        WriteInfoLog "Finished get file last accessed date for file $($fileRelativeUrl)" -ForegroundColor Green
+        return $auditLogResults.CreationTime;
+
+
+        <#
+        #Connect to Exchange Online
+Connect-ExchangeOnline -ShowBanner:$False
+ 
+#Set Dates
+$StartDate = (Get-Date).AddDays(-7)
+$EndDate = (Get-Date)
+ 
+#Search Unified Log
+#$AuditLog = Search-UnifiedAuditLog -StartDate $StartDate -EndDate $EndDate -ResultSize 5000
+$AuditLog = Search-UnifiedAuditLog -StartDate 5/1/2018 -EndDate 5/8/2018 -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet
+$AuditLogResults = $AuditLog.AuditData | ConvertFrom-Json | select CreationTime, UserID, Operation, ClientIP, ObjectID
+$AuditLogResults
+$AuditLogResults | Export-csv -Path $CSVPath -NoTypeInformation
+ 
+#Disconnect Exchange Online
+Disconnect-ExchangeOnline
+
+
+#Read more: https://www.sharepointdiary.com/2019/09/sharepoint-online-search-audit-logs-in-security-compliance-center.html#ixzz8Gd3K7YWi
+        #>
     }
 }
 
-function ScanFiles {
+function ScanLastModifiedFiles {
     param (
         [string]$sitecollectionUrl,
         [string]$webUrl,
         [string]$listTitle,
-        [string]$listRootFolder,
-        [string]$listId,
-        [string]$dayOrMonthOrYear,
-        [int]$number
+        [string]$lastModifiedDayOrMonthOrYear
     )
 
     $allFiles = @() # Result array to keep all file details
     WriteInfoLog "Begin check files in the list $($listTitle)"
-    $query = getDateTimeFilter -dayOrMonthOrYear $dayOrMonthOrYear -number $number
+    $query = getLastModifiedDateQuery -lastModifiedDayOrMonthOrYear $lastModifiedDayOrMonthOrYear
     $ListItems = Get-PnPListItem -List $listTitle -Query $query
     #Enumerate all list items to get file details
     ForEach ($Item in $ListItems) {
@@ -346,8 +409,8 @@ function ScanWebs {
         [string]$webUrl,
         [string]$sitecollectionUrl,
         [switch]$reportLevel,
-        [string]$dayOrMonthOrYear,
-        [int]$number
+        [string]$lastModifieddayOrMonthOrYear,
+        [string]$includeLastAccessFiles
     )
     $listReportLines = New-Object 'System.Collections.Generic.List[PSCustomObject]'
     $web = Get-PnPWeb -Identity $webId
@@ -363,25 +426,48 @@ function ScanWebs {
                 continue;
             }
             
-            if ($reportLevel -eq "listLevel" -or $reportLevel -eq $null) {
-                $returnObject = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id;
-                if ($null -ne $returnObject) {              
-                    $listReportLines.Add($returnObject[$returnObject.length - 1]);
-                    #$listReportLines.Add($returnObject);
+            switch($reportLevel)
+            {
+                "listLevel" {
+                    $returnObject = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id;
+                    if ($null -ne $returnObject) {              
+                        $listReportLines.Add($returnObject[$returnObject.length - 1]);
+                        #$listReportLines.Add($returnObject);
+                    }
+                    else {
+                        WriteWarnLog "The report line of the list $($list.Title) is null" 
+                    }
+                    break;
                 }
-                else {
-                    WriteWarnLog "The report line of the list $($list.Title) is null" 
+               "fileLevel" {
+                    $returnObject = ScanLastModifiedFiles -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear
+
+                    if ($null -ne $returnObject -and $includeLastAccessFiles -eq "yes") {
+                        $fileLastAccessedDate = GetFilesLastAccessedDate -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -fileRelativeUrl $returnObject.RelativeURL -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear
+                        $returnObject | add-member -Name "lastAccessedDate" -Value $fileLastAccessedDate 
+                    }
+
+                    if ($null -ne $returnObject) {              
+                        $listReportLines.Add($returnObject);
+                    }
+                    else {
+                        WriteWarnLog "The report line of the list $($list.Title) is null" 
+                    }
+
+                    break;
+                }
+                Default {
+                    $returnObject = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id;
+                    if ($null -ne $returnObject) {              
+                        $listReportLines.Add($returnObject[$returnObject.length - 1]);
+                        #$listReportLines.Add($returnObject);
+                    }
+                    else {
+                        WriteWarnLog "The report line of the list $($list.Title) is null" 
+                    }
+                    break;
                 }
             }
-            else {
-                $returnObject = ScanFiles -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id -dayOrMonthOrYear $dayOrMonthOrYear -number $number;
-                if ($null -ne $returnObject) {              
-                    $listReportLines.Add($returnObject);
-                }
-                else {
-                    WriteWarnLog "The report line of the list $($list.Title) is null" 
-                }
-            } 
         }
         catch {
             WriteWarnLog "An error occurred while exporting the list $($list.Title).Exception:$($_)" 
@@ -401,8 +487,8 @@ function ScanSiteCollection {
         [string]$thumbprint,
         [string]$url,
         [string]$reportLevel,
-        [string]$dayOrMonthOrYear,
-        [int]$number
+        [string]$lastModifieddayOrMonthOrYear,
+        [string]$includeLastAccessFiles
     )
     try {
         $webReportLines = New-Object 'System.Collections.Generic.List[PSCustomObject]'
@@ -410,11 +496,11 @@ function ScanSiteCollection {
         Connect-PnPOnline -Url $url -ClientId $clientId -Thumbprint $thumbprint -Tenant $tenantFullName
 
         $rootWeb = Get-PnPWeb
-        $webReportLines = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $rootWeb.Id -webUrl $rootWeb.Url -sitecollectionUrl $url -reportLevel $reportLevel -dayOrMonthOrYear $dayOrMonthOrYear -number $number;
+        $webReportLines = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $rootWeb.Id -webUrl $rootWeb.Url -sitecollectionUrl $url -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -includeLastAccessFiles $includeLastAccessFiles
         $webs = Get-PnPSubWeb -Recurse;
         foreach ($web in $webs) {
             try {
-                $webReportLine = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $web.Id -webUrl $web.Url -sitecollectionUrl $url -reportLevel $reportLevel -dayOrMonthOrYear $dayOrMonthOrYear -number $number;
+                $webReportLine = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $web.Id -webUrl $web.Url -sitecollectionUrl $url -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -includeLastAccessFiles $includeLastAccessFiles
                 $webReportLines.Add($webReportLine)
             }
             catch {

@@ -35,13 +35,16 @@ param(
     [Parameter(Mandatory = $false)]
     [ValidateSet('listLevel', 'fileLevel')]
     [string] $reportLevel = $(Read-Host -Prompt "Please enter report level needed (allowed values:listLevel or fileLevel)"),
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('yes', 'no')]
+    [string] $includeLastAccessed = $(Read-Host -Prompt "Please enter yes/no to include last accessed files (allowed values:yes or no)"),
     
     [Parameter(Mandatory = $false)]
-    [ValidateSet('day', 'month','year')]
-    [string] $dayOrMonthOrYear = $(Read-Host -Prompt "Please enter day/month/year condition to use for files (allowed values:day or month or year)"),
-    
+    [string] $lastModifieddayOrMonthOrYear = $(Read-Host -Prompt "Please enter day/month/year with number to use for files last modified condition (allowed values:day:30 or month:30 or year:10)"),
+
     [Parameter(Mandatory = $false)]
-    [string] $number = $(Read-Host -Prompt "Please enter number of day/month/year for condition (e.g., 30)")
+    [string] $lastAccesseddayOrMonthOrYear = $(Read-Host -Prompt "Please enter day/month/year with number to use for files last accessed condition (allowed values:day:30 or month:30 or year:10)"),
 )
 
 $csvData = Import-Csv -Path ".\Appdetails.csv"
@@ -131,11 +134,15 @@ try
     if([System.IO.Directory]::Exists($jobFolder) -eq $false){
         [System.IO.Directory]::CreateDirectory($jobFolder) | Out-Null
     }
+
+    if($null -ne $includeLastAccessed -and $includeLastAccessed -eq 'yes') {
+        Connect-ExchangeOnline -AppID $clientId -CertificateThumbPrint $thumbprint -Organization $tenantFullName
+    }
     
     $siteCollectionReportLines  = @();
     foreach($sitecollection in $siteCollections){
         WriteInfoLog "Begin scan the site collection $($sitecollection.URL)"
-        $siteCollectionReportLine = ScanSiteCollection -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL -reportLevel $reportLevel -dayOrMonthOrYear $dayOrMonthOrYear -number $number;
+        $siteCollectionReportLine = ScanSiteCollection -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear
         $siteCollectionReportLines += $siteCollectionReportLine;
         WriteInfoLog "Finished scan the site collection $($sitecollection.URL)" -ForegroundColor Green
     }
