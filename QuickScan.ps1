@@ -7,25 +7,25 @@
 # Last Modified Date:      2023/10/13
 #=====================================================================================================================
 param(
-<#
-    [Parameter(Mandatory = $true)]
-    [ValidateNotNullOrEmpty()]
     [string] $tenantFullName = "engage2syddev.onmicrosoft.com",
 
     [Parameter(Mandatory = $false)]
-    [string] $inputFileName = "",
+    [string] $inputFileName = "input-sitecollections.csv",
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('listLevel', 'fileLevel')]
-    [string] $reportLevel = "listLevel",
+    [string] $reportLevel = "fileLevel",
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet('day', 'month','year')]
-    [string] $dayOrMonthOrYear = "day",
+    [ValidateSet('yes', 'no')]
+    [string] $includeLastAccessed = "yes",
 
     [Parameter(Mandatory = $false)]
-    [int] $number = 100
-#>
+    [string] $lastModifieddayOrMonthOrYear = "day:100",
+
+    [Parameter(Mandatory = $false)]
+    [string] $lastAccesseddayOrMonthOrYear = "day:100"
+<#
     [Parameter(Mandatory = $true)]
     [string] $tenantFullName = $(Read-Host -Prompt "Please enter your tenant full name (e.g., yourdomain.onmicrosoft.com)"),
 
@@ -38,14 +38,15 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('yes', 'no')]
-    [string] $includeLastAccessed = $(Read-Host -Prompt "Please enter yes/no to include last accessed files (allowed values:yes or no)"),
+    [string] $includeLastAccessed = $(Read-Host -Prompt "If fileLevel, please enter yes/no to include last accessed files (allowed values:yes or no)"),
     
     [Parameter(Mandatory = $false)]
-    [string] $lastModifieddayOrMonthOrYear = $(Read-Host -Prompt "Please enter day/month/year with number to use for files last modified condition (allowed values:day:30 or month:30 or year:10)"),
+    [string] $lastModifieddayOrMonthOrYear = $(Read-Host -Prompt "If fileLevel, please enter day/month/year with number to use for files last modified condition (allowed values:day:30 or month:30 or year:10)"),
 
     [Parameter(Mandatory = $false)]
-    [string] $lastAccesseddayOrMonthOrYear = $(Read-Host -Prompt "Please enter day/month/year with number to use for files last accessed condition (allowed values:day:30 or month:30 or year:10)"),
-)
+    [string] $lastAccesseddayOrMonthOrYear = $(Read-Host -Prompt "If fileLevel, please enter day/month/year with number to use for files last accessed condition (allowed values:day:30 or month:30 or year:10)"),
+#>
+    )
 
 $csvData = Import-Csv -Path ".\Appdetails.csv"
 if (-not $csvData) {
@@ -58,7 +59,6 @@ $thumbprint = $csvData.Thumbprint.Trim()
 #========================================================
 #Static Variables (no need to modify)
 #========================================================
-$pageSize=500
 $execPath = Split-Path $MyInvocation.MyCommand.Path -parent
 $jobId=[DateTime]::Now.ToString("yyyyMMddHHmmss")
 $jobFolder=Join-Path $execPath $jobId
@@ -110,7 +110,7 @@ Install-RequiredModules
 try
 {
     #Import-Module Microsoft.Online.SharePoint.PowerShell -DisableNameChecking | out-null
-    #Import-Module PnP.PowerShell -DisableNameChecking | out-null
+    Import-Module PnP.PowerShell -DisableNameChecking | out-null
     #"$PSScriptRoot\bin\*" | gci -include '*.psm1','*.ps1' | Import-Module -DisableNameChecking | out-null
  }
 catch
@@ -136,13 +136,18 @@ try
     }
 
     if($null -ne $includeLastAccessed -and $includeLastAccessed -eq 'yes') {
-        Connect-ExchangeOnline -AppID $clientId -CertificateThumbPrint $thumbprint -Organization $tenantFullName
+        Connect-ExchangeOnline -CertificateThumbPrint $thumbprint -AppID $appId -Organization $tenantFullName
+        $audting = Get-AdminAuditLogConfig | Format-List UnifiedAuditLogIngestionEnabled;
+        if("False" -eq $audting)
+        {
+            Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true
+        }
     }
     
     $siteCollectionReportLines  = @();
     foreach($sitecollection in $siteCollections){
         WriteInfoLog "Begin scan the site collection $($sitecollection.URL)"
-        $siteCollectionReportLine = ScanSiteCollection -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear
+        $siteCollectionReportLine = ScanSiteCollection -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear -includeLastAccessed $includeLastAccessed
         $siteCollectionReportLines += $siteCollectionReportLine;
         WriteInfoLog "Finished scan the site collection $($sitecollection.URL)" -ForegroundColor Green
     }

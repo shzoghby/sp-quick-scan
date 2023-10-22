@@ -130,12 +130,13 @@ function WriteErrorLog($message) {
 #=======================================================================
 function Install-RequiredModules {
     # Array of required modules
-    $requiredModules = @('PowerShellGet', 'PnP.PowerShell', 'AzureAD', 'ExchangeOnlineManagement')
+    $requiredModules = @('PowerShellGet', 'PnP.PowerShell', 'ExchangeOnlineManagement')
 
     foreach ($module in $requiredModules) {
         # Check if the module is installed
         if (Get-Module -ListAvailable -Name $module) {
             Write-Host "$module module is already installed." -ForegroundColor Green
+            #Uninstall-Module $module -Force
         }
         else {
             # Prompt the user if they wish to install the module
@@ -199,31 +200,28 @@ function getLastModifiedDateQuery {
         [string]$lastModifiedDayOrMonthOrYear
     )
 
-    $dayOrMonthOrYear = $lastModifiedDayOrMonthOrYear.SubString(0, $lastModifiedDayOrMonthOrYear.IndexOf(":"));
-    $number = $lastModifiedDayOrMonthOrYear.SubString($lastModifiedDayOrMonthOrYear.IndexOf(":"), $lastModifiedDayOrMonthOrYear.length);
+    $lastModifiedDayOrMonthOrYearArr = $lastModifiedDayOrMonthOrYear.Split(":");
+    $dayOrMonthOrYear = $lastModifiedDayOrMonthOrYearArr[0];
+    $number = $lastModifiedDayOrMonthOrYearArr[1];
 
-    if($null -eq $lastModifiedDayOrMonthOrYear -or '' -eq $lastModifiedDayOrMonthOrYear)
-    {
+    if ($null -eq $lastModifiedDayOrMonthOrYear -or '' -eq $lastModifiedDayOrMonthOrYear) {
         $number = 30;
         $dayOrMonthOrYear = 'day';
     }
 
-    if($null -eq $number -or '' -eq $number)
-    {
+    if ($null -eq $number -or '' -eq $number) {
         $number = 30;
     }
 
-    if($null -eq $dayOrMonthOrYear -or '' -eq $dayOrMonthOrYear)
-    {
+    if ($null -eq $dayOrMonthOrYear -or '' -eq $dayOrMonthOrYear) {
         $dayOrMonthOrYear = 'day';
     }
     
-    switch($dayOrMonthOrYear)
-    {
-        'day' return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>"
-        'month' return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetMonths='-$number'/></Value></Geq></Where></Query></View>"
-        'year' return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetYears='-$number'/></Value></Geq></Where></Query></View>"
-        default return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>"
+    switch ($dayOrMonthOrYear) {
+        'day' { return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>" }
+        'month' { return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetMonths='-$number'/></Value></Geq></Where></Query></View>" }
+        'year' { return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetYears='-$number'/></Value></Geq></Where></Query></View>" }
+        default { return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>" }
     }
 }
 
@@ -231,59 +229,55 @@ function getLastAccessedDateTimeFilter {
     param (
         [string]$lastAccessedDayOrMonthOrYear
     )
-    $dayOrMonthOrYear = $lastAccessedDayOrMonthOrYear.SubString(0, $lastAccessedDayOrMonthOrYear.IndexOf(":"));
-    $number = $lastAccessedDayOrMonthOrYear.SubString($lastAccessedDayOrMonthOrYear.IndexOf(":"), $lastAccessedDayOrMonthOrYear.length);
+    $lastAccessedDayOrMonthOrYearArr = $lastAccessedDayOrMonthOrYear.Split(":");
+    $dayOrMonthOrYear = $lastAccessedDayOrMonthOrYearArr[0];
+    $number = $lastAccessedDayOrMonthOrYearArr[1];
 
-    if($null -eq $lastAccessedDayOrMonthOrYear -or '' -eq $lastAccessedDayOrMonthOrYear)
-    {
+    if ($null -eq $lastAccessedDayOrMonthOrYear -or '' -eq $lastAccessedDayOrMonthOrYear) {
         $number = 30;
         $dayOrMonthOrYear = 'day';
     }
 
-    if($null -eq $number -or '' -eq $number)
-    {
+    if ($null -eq $number -or '' -eq $number) {
         $number = 30;
     }
 
-    if($null -eq $dayOrMonthOrYear -or '' -eq $dayOrMonthOrYear)
-    {
+    if ($null -eq $dayOrMonthOrYear -or '' -eq $dayOrMonthOrYear) {
         $dayOrMonthOrYear = 'day';
     }
 
-    switch($dayOrMonthOrYear)
-    {
-        'day' return (Get-Date).AddDays(-$number)
-        'month' return (Get-Date).AddMonths(-$number)
-        'year' return (Get-Date).AddYears(-$number)
-        default return (Get-Date).AddDays(-$number)
+    switch ($dayOrMonthOrYear) {
+        'day' { return (Get-Date).AddDays(-$number) }
+        'month' { return (Get-Date).AddMonths(-$number) }
+        'year' { return (Get-Date).AddYears(-$number) }
+        default { return (Get-Date).AddDays(-$number) }
     }
 }
 
-function GetFilesLastAccessedDate {
+function GetFileLastAccessedDate {
     param (
         [string]$sitecollectionUrl,
         [string]$webUrl,
         [string] $fileRelativeUrl,
         [string]$lastAccessedDayOrMonthOrYear
     )
-    {
-        $fileAbsoluteURL = `$webUrl.SubString(0,$webUrl.IndexOf("/sites"))$fileRelativeUrl`
-        WriteInfoLog "Begin get file last accessed date for file $($fileRelativeUrl)"
+    $fileAbsoluteURL = "$($webUrl.SubString(0, $webUrl.IndexOf("/sites")))/$fileRelativeUrl";
+    WriteInfoLog "Begin get file last accessed date for file $($fileRelativeUrl)"
 
-        #Set Dates
-        $startDate = getLastAccessedDateTimeFilter -lastAccessedDayOrMonthOrYear $lastAccessedDayOrMonthOrYear
-        $endDate = (Get-Date)
+    #Set Dates
+    $startDate = getLastAccessedDateTimeFilter -lastAccessedDayOrMonthOrYear $lastAccessedDayOrMonthOrYear
+    $endDate = (Get-Date)
         
-        #Search Unified Log
-        #$AuditLog = Search-UnifiedAuditLog -StartDate $StartDate -EndDate $EndDate -ResultSize 5000
-        $auditLog = Search-UnifiedAuditLog -StartDate $startDate -EndDate $endDate -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet -ObjectIds $fileAbsoluteURL
-        $auditLogResults = $auditLog.AuditData | ConvertFrom-Json | select CreationTime, UserID, Operation, ClientIP, ObjectID
+    #Search Unified Log
+    #$AuditLog = Search-UnifiedAuditLog -StartDate $StartDate -EndDate $EndDate -ResultSize 5000
+    $auditLog = Search-UnifiedAuditLog -StartDate $startDate -EndDate $endDate -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet -ObjectIds $fileAbsoluteURL
+    $auditLogResults = $auditLog.AuditData | ConvertFrom-Json | Select-Object CreationTime, UserID, Operation, ClientIP, ObjectID
         
-        WriteInfoLog "Finished get file last accessed date for file $($fileRelativeUrl)" -ForegroundColor Green
-        return $auditLogResults.CreationTime;
+    WriteInfoLog "Finished get file last accessed date for file $($fileRelativeUrl)" -ForegroundColor Green
+    return $auditLogResults.CreationTime;
 
 
-        <#
+    <#
         #Connect to Exchange Online
 Connect-ExchangeOnline -ShowBanner:$False
  
@@ -304,15 +298,16 @@ Disconnect-ExchangeOnline
 
 #Read more: https://www.sharepointdiary.com/2019/09/sharepoint-online-search-audit-logs-in-security-compliance-center.html#ixzz8Gd3K7YWi
         #>
-    }
 }
 
-function ScanLastModifiedFiles {
+function ScanFiles {
     param (
         [string]$sitecollectionUrl,
         [string]$webUrl,
         [string]$listTitle,
-        [string]$lastModifiedDayOrMonthOrYear
+        [string]$lastModifiedDayOrMonthOrYear,
+        [string]$lastAccesseddayOrMonthOrYear,
+        [string]$includeLastAccessed
     )
 
     $allFiles = @() # Result array to keep all file details
@@ -321,6 +316,10 @@ function ScanLastModifiedFiles {
     $ListItems = Get-PnPListItem -List $listTitle -Query $query
     #Enumerate all list items to get file details
     ForEach ($Item in $ListItems) {
+        if ($includeLastAccessed -eq "yes") {
+            $lastAccessedDate = GetFileLastAccessedDate -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -fileRelativeUrl $($Item.FieldValues["FileRef"]) -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear
+        }
+
         #Add file details to Result array
         $allFiles += New-Object PSObject -property $([ordered]@{
                 SitecollectionUrl = $sitecollectionUrl;
@@ -334,9 +333,9 @@ function ScanLastModifiedFiles {
                 CreatedTime       = $Item.FieldValues["Created"]
                 LastModifiedTime  = $Item.FieldValues["Modified"]
                 ModifiedByEmail   = $Item.FieldValues["Editor"].Email
+                LastAccessedDate  = $lastAccessedDate
                 FileSizeMB        = [Math]::Round(($Item.FieldValues["File_x0020_Size"] / 1024 / 1024), 2) #File size in MB
-            })
-
+            });
     }
     
     WriteInfoLog "Finished scan files in the list $($listTitle)" -ForegroundColor Green
@@ -408,9 +407,10 @@ function ScanWebs {
         [string]$webId,
         [string]$webUrl,
         [string]$sitecollectionUrl,
-        [switch]$reportLevel,
+        [string]$reportLevel,
         [string]$lastModifieddayOrMonthOrYear,
-        [string]$includeLastAccessFiles
+        [string]$includeLastAccessed,
+        [string]$lastAccesseddayOrMonthOrYear
     )
     $listReportLines = New-Object 'System.Collections.Generic.List[PSCustomObject]'
     $web = Get-PnPWeb -Identity $webId
@@ -426,8 +426,7 @@ function ScanWebs {
                 continue;
             }
             
-            switch($reportLevel)
-            {
+            switch ($reportLevel) {
                 "listLevel" {
                     $returnObject = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id;
                     if ($null -ne $returnObject) {              
@@ -439,13 +438,8 @@ function ScanWebs {
                     }
                     break;
                 }
-               "fileLevel" {
-                    $returnObject = ScanLastModifiedFiles -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear
-
-                    if ($null -ne $returnObject -and $includeLastAccessFiles -eq "yes") {
-                        $fileLastAccessedDate = GetFilesLastAccessedDate -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -fileRelativeUrl $returnObject.RelativeURL -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear
-                        $returnObject | add-member -Name "lastAccessedDate" -Value $fileLastAccessedDate 
-                    }
+                "fileLevel" {
+                    $returnObject = ScanFiles -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear -includeLastAccessed $includeLastAccessed
 
                     if ($null -ne $returnObject) {              
                         $listReportLines.Add($returnObject);
@@ -488,7 +482,8 @@ function ScanSiteCollection {
         [string]$url,
         [string]$reportLevel,
         [string]$lastModifieddayOrMonthOrYear,
-        [string]$includeLastAccessFiles
+        [string]$includeLastAccessed,
+        [string]$lastAccesseddayOrMonthOrYear
     )
     try {
         $webReportLines = New-Object 'System.Collections.Generic.List[PSCustomObject]'
@@ -496,11 +491,11 @@ function ScanSiteCollection {
         Connect-PnPOnline -Url $url -ClientId $clientId -Thumbprint $thumbprint -Tenant $tenantFullName
 
         $rootWeb = Get-PnPWeb
-        $webReportLines = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $rootWeb.Id -webUrl $rootWeb.Url -sitecollectionUrl $url -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -includeLastAccessFiles $includeLastAccessFiles
+        $webReportLines = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $rootWeb.Id -webUrl $rootWeb.Url -sitecollectionUrl $url -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -includeLastAccessed $includeLastAccessed -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear
         $webs = Get-PnPSubWeb -Recurse;
         foreach ($web in $webs) {
             try {
-                $webReportLine = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $web.Id -webUrl $web.Url -sitecollectionUrl $url -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -includeLastAccessFiles $includeLastAccessFiles
+                $webReportLine = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $web.Id -webUrl $web.Url -sitecollectionUrl $url -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -includeLastAccessed $includeLastAccessed -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear
                 $webReportLines.Add($webReportLine)
             }
             catch {
@@ -515,5 +510,29 @@ function ScanSiteCollection {
     }
     
 }
-    
+
+function GrantAppPermissions {
+    param (
+        [string]$servicePrincipalObjectId
+    )
+    # Retrieve the Service Principal for SharePoint Online
+    $spOnline = Get-AzureADServicePrincipal -Filter "AppId eq '00000003-0000-0ff1-ce00-000000000000'"
+    $exchangeOnine = Get-AzureADServicePrincipal -Filter "AppId eq '00000002-0000-0ff1-ce00-000000000000'"
+ 
+    # Check if the permission already exists
+    $existingSpOnlinePermission = Get-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId | Where-Object { $_.ResourceId -eq $spOnline.ObjectId }
+    $existingExchangeOnlinePermission = Get-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId | Where-Object { $_.ResourceId -eq $exchangeOnine.ObjectId }
+ 
+    # Grant Full Control permission to SharePoint Online if not already granted
+    if (-not $existingSpOnlinePermission) {
+        $fullControlPermission = $spOnline.AppRoles | Where-Object { $_.Value -eq "Sites.FullControl.All" }
+        New-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId -PrincipalId $servicePrincipalObjectId -Id $fullControlPermission.Id -ResourceId $spOnline.ObjectId
+    }
+ 
+    # GrantExchange.ManageAsApp permission to Office 365 Exchange Online if not already granted
+    if (-not $existingExchangeOnlinePermission) {
+        $exchangePermission = $exchangeOnine.AppRoles | Where-Object { $_.Value -eq "Exchange.ManageAsApp" }
+        New-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId -PrincipalId $servicePrincipalObjectId -Id $exchangePermission.Id -ResourceId $exchangeOnine.ObjectId
+    } 
+}
 Write-Host 'Success' -ForegroundColor Green
