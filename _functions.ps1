@@ -274,7 +274,14 @@ function GetFileLastAccessedDate {
     $auditLog = Search-UnifiedAuditLog -StartDate $startDate -EndDate $endDate -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet -ObjectIds $fileAbsoluteURL
     #$auditLog = Search-UnifiedAuditLog -StartDate $startDate -EndDate $endDate -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet
     if ($null -ne $auditLog) {
-        $auditLogResults = $auditLog.AuditData | ConvertFrom-Json | Select-Object CreationTime, UserID, Operation, ClientIP, ObjectID;
+        if ($auditLog.length -gt 1) {
+            $auditSortedResults = $auditLog | Sort-Object -Property CreationDate | Select-Object -Last 1;
+        }
+        else {
+            $auditSortedResults = $auditLog;
+        }
+
+        $auditLogResults = $auditSortedResults.AuditData | ConvertFrom-Json | Select-Object CreationTime, UserID, Operation, ClientIP, ObjectID;
         $lastAccessedDate = $auditLogResults.CreationTime;
     }
 
