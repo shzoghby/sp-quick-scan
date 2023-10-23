@@ -261,7 +261,8 @@ function GetFileLastAccessedDate {
         [string] $fileRelativeUrl,
         [string]$lastAccessedDayOrMonthOrYear
     )
-    $fileAbsoluteURL = "$($webUrl.SubString(0, $webUrl.IndexOf("/sites")))/$fileRelativeUrl";
+    $lastAccessedDate = '';
+    $fileAbsoluteURL = "$($webUrl.SubString(0, $webUrl.IndexOf("/sites")))$fileRelativeUrl";
     WriteInfoLog "Begin get file last accessed date for file $($fileRelativeUrl)"
 
     #Set Dates
@@ -271,12 +272,21 @@ function GetFileLastAccessedDate {
     #Search Unified Log
     #$AuditLog = Search-UnifiedAuditLog -StartDate $StartDate -EndDate $EndDate -ResultSize 5000
     $auditLog = Search-UnifiedAuditLog -StartDate $startDate -EndDate $endDate -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet -ObjectIds $fileAbsoluteURL
-    $auditLogResults = $auditLog.AuditData | ConvertFrom-Json | Select-Object CreationTime, UserID, Operation, ClientIP, ObjectID
-        
-    WriteInfoLog "Finished get file last accessed date for file $($fileRelativeUrl)" -ForegroundColor Green
-    return $auditLogResults.CreationTime;
+    #$auditLog = Search-UnifiedAuditLog -StartDate $startDate -EndDate $endDate -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet
+    if ($null -ne $auditLog) {
+        if ($auditLog.length -gt 1) {
+            $auditSortedResults = $auditLog | Sort-Object -Property CreationDate | Select-Object -Last 1;
+        }
+        else {
+            $auditSortedResults = $auditLog;
+        }
 
+        $auditLogResults = $auditSortedResults.AuditData | ConvertFrom-Json | Select-Object CreationTime, UserID, Operation, ClientIP, ObjectID;
+        $lastAccessedDate = $auditLogResults.CreationTime;
+    }
 
+    WriteInfoLog "Finished get file last accessed date for file $($fileRelativeUrl)" -ForegroundColor Green;
+    return $lastAccessedDate;
     <#
         #Connect to Exchange Online
 Connect-ExchangeOnline -ShowBanner:$False
@@ -332,8 +342,8 @@ function ScanFiles {
                 CreatedByEmail    = $Item.FieldValues["Author"].Email
                 CreatedTime       = $Item.FieldValues["Created"]
                 LastModifiedTime  = $Item.FieldValues["Modified"]
-                ModifiedByEmail   = $Item.FieldValues["Editor"].Email
                 LastAccessedDate  = $lastAccessedDate
+                ModifiedByEmail   = $Item.FieldValues["Editor"].Email
                 FileSizeMB        = [Math]::Round(($Item.FieldValues["File_x0020_Size"] / 1024 / 1024), 2) #File size in MB
             });
     }
@@ -508,7 +518,6 @@ function ScanSiteCollection {
     catch {
         WriteErrorLog "An error occurred while scaning the site collection $($url).Exception:$($_.Exception)" 
     }
-    
 }
 
 function GrantAppPermissions {

@@ -7,6 +7,7 @@
 # Last Modified Date:      2023/10/13
 #=====================================================================================================================
 param(
+    <#
     [string] $tenantFullName = "engage2syddev.onmicrosoft.com",
 
     [Parameter(Mandatory = $false)]
@@ -24,8 +25,8 @@ param(
     [string] $lastModifieddayOrMonthOrYear = "day:100",
 
     [Parameter(Mandatory = $false)]
-    [string] $lastAccesseddayOrMonthOrYear = "day:100"
-<#
+    [string] $lastAccesseddayOrMonthOrYear = "day:90"
+#>
     [Parameter(Mandatory = $true)]
     [string] $tenantFullName = $(Read-Host -Prompt "Please enter your tenant full name (e.g., yourdomain.onmicrosoft.com)"),
 
@@ -44,9 +45,8 @@ param(
     [string] $lastModifieddayOrMonthOrYear = $(Read-Host -Prompt "If fileLevel, please enter day/month/year with number to use for files last modified condition (allowed values:day:30 or month:30 or year:10)"),
 
     [Parameter(Mandatory = $false)]
-    [string] $lastAccesseddayOrMonthOrYear = $(Read-Host -Prompt "If fileLevel, please enter day/month/year with number to use for files last accessed condition (allowed values:day:30 or month:30 or year:10)"),
-#>
-    )
+    [string] $lastAccesseddayOrMonthOrYear = $(Read-Host -Prompt "If fileLevel, please enter day/month/year with number to use for files last accessed condition (allowed values:day:30) audits limited to 90 days")
+)
 
 $csvData = Import-Csv -Path ".\Appdetails.csv"
 if (-not $csvData) {
@@ -60,27 +60,25 @@ $thumbprint = $csvData.Thumbprint.Trim()
 #Static Variables (no need to modify)
 #========================================================
 $execPath = Split-Path $MyInvocation.MyCommand.Path -parent
-$jobId=[DateTime]::Now.ToString("yyyyMMddHHmmss")
-$jobFolder=Join-Path $execPath $jobId
+$jobId = [DateTime]::Now.ToString("yyyyMMddHHmmss")
+$jobFolder = Join-Path $execPath $jobId
 
 #$inputFileName="input-sitecollections.csv";
 $inputFilePath = $null;
-if($inputFileName) {
-$inputFilePath=Join-Path $execPath $inputFileName;
+if ($inputFileName) {
+    $inputFilePath = Join-Path $execPath $inputFileName;
 }
 
-$outFileName = [System.String]::Format("Report_{0}_{1}.csv",[System.DateTime]::Now.ToString("yyyyMMddhhmmss"),$reportLevel);
+$outFileName = [System.String]::Format("Report_{0}_{1}.csv", [System.DateTime]::Now.ToString("yyyyMMddhhmmss"), $reportLevel);
 $outFilePath = Join-Path $jobFolder $outFileName;
 
 #========================================================
 #Functions module
 #=======================================================
-try
-{
+try {
     . .\_functions.ps1
 }
-catch
-{
+catch {
     Write-Error "Could not load _functions.ps1 file. $_"
     exit
 }
@@ -88,17 +86,15 @@ catch
 #========================================================
 #Log directory
 #=======================================================
-try
-{
-    $parent=Split-Path -Parent $MyInvocation.MyCommand.Definition
-    $logfile=[System.IO.Path]::Combine($parent,"Logs\Log.log")
-    $logpath=Split-Path -Parent $logfile
+try {
+    $parent = Split-Path -Parent $MyInvocation.MyCommand.Definition
+    $logfile = [System.IO.Path]::Combine($parent, "Logs\Log.log")
+    $logpath = Split-Path -Parent $logfile
     if (!(Test-Path $logpath)) {
         New-Item -ItemType Directory -Force -Path $logpath
     }
 }
-catch
-{
+catch {
     Write-Host "An error occured while writing errors to log. $_"
 }
 
@@ -107,14 +103,12 @@ catch
 #=======================================================
 Install-RequiredModules
 
-try
-{
+try {
     #Import-Module Microsoft.Online.SharePoint.PowerShell -DisableNameChecking | out-null
     Import-Module PnP.PowerShell -DisableNameChecking | out-null
     #"$PSScriptRoot\bin\*" | gci -include '*.psm1','*.ps1' | Import-Module -DisableNameChecking | out-null
- }
-catch
-{
+}
+catch {
     Write-Error "Could not load required assemblies"
     exit
 }
@@ -127,25 +121,19 @@ $siteCollections = GetSitecollections -tenantFullName $tenantFullName -clientId 
 #========================================================
 #Main Run
 #=======================================================
-try 
-{
-    $startTime=Get-Date
+try {
+    $startTime = Get-Date
     WriteInfoLog "The job is running on $($startTime)."
-    if([System.IO.Directory]::Exists($jobFolder) -eq $false){
+    if ([System.IO.Directory]::Exists($jobFolder) -eq $false) {
         [System.IO.Directory]::CreateDirectory($jobFolder) | Out-Null
     }
 
-    if($null -ne $includeLastAccessed -and $includeLastAccessed -eq 'yes') {
+    if ($null -ne $includeLastAccessed -and $includeLastAccessed -eq 'yes') {
         Connect-ExchangeOnline -CertificateThumbPrint $thumbprint -AppID $appId -Organization $tenantFullName
-        $audting = Get-AdminAuditLogConfig | Format-List UnifiedAuditLogIngestionEnabled;
-        if("False" -eq $audting)
-        {
-            Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true
-        }
     }
     
-    $siteCollectionReportLines  = @();
-    foreach($sitecollection in $siteCollections){
+    $siteCollectionReportLines = @();
+    foreach ($sitecollection in $siteCollections) {
         WriteInfoLog "Begin scan the site collection $($sitecollection.URL)"
         $siteCollectionReportLine = ScanSiteCollection -tenantFullName $tenantFullName -clientId $appId -thumbprint $thumbprint -url $sitecollection.URL -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear -includeLastAccessed $includeLastAccessed
         $siteCollectionReportLines += $siteCollectionReportLine;
