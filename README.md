@@ -12,7 +12,7 @@ We must turn ON the audit logs feature in the Compliance Center before you acces
 
 ![](README/enable-audit.png)
 
-The final step is to make sure that Exchange Online recognizes the automation account which hosts the managed identity as an Exchange administrator. This is done by assigning the Exchange Administrator role to the automation account’s app in the Azure AD admin center. Figure 4 shows how to add the assignment of the Exchange administrator role to the app owned by an automation account.
+4. The final step is to make sure that Exchange Online recognizes the automation account which hosts the managed identity as an Exchange administrator. This is done by assigning the Exchange Administrator role to the automation account’s app in the Azure AD admin center.
 
 ### Create Azure App
 
@@ -34,8 +34,9 @@ The final step is to make sure that Exchange Online recognizes the automation ac
   | tenantFullName  | yes  | null |  enter your tenant full name (e.g., yourdomain.onmicrosoft.com) |
   | inputFileName  | no | null | enter name of site collections input file or press enter to scan the whole tenant (e.g., input-sitecollections.csv) |
   | reportLevel  | no | null | enter report level needed (allowed values:listLevel or fileLevel)|
-  | dayOrMonthOrYear  | no | day | enter day/month/year condition to use for files (allowed values:day or month or year) |
-  | number  | no | 30 |  enter number of day/month/year for condition (e.g., 30) |
+  | includeLastAccessed  | no | null | If fileLevel, please enter yes/no to include last accessed files (allowed values:yes or no)|
+  | lastModifieddayOrMonthOrYear  | no | day:30 | If fileLevel, please enter day/month/year with number to use for files last modified condition (allowed values:'day:30' or 'month:30' or 'year:10') |
+  | lastAccesseddayOrMonthOrYear  | no | day:90 |  If fileLevel, please enter day/month/year with number to use for files last accessed condition (allowed values:'day:90') Audits limited to 90 days maximum|
 
 3. Once the script run is completed successfully, you should have an CSV file created with name *Report_<yyyyMMddhhmmss>_listLevel* or *Report_<yyyyMMddhhmmss>_fileLevel*
    
