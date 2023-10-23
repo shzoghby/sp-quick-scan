@@ -54,6 +54,6 @@ We must turn ON the audit logs feature in the Compliance Center before you acces
 ## Sample Output Files
 
 ![](README/output-file-listlevel.png)
-![](README/output-file-filelevel.png)
+![](README/output-file-filelevel.jpg)
 
 ---
