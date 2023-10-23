@@ -201,12 +201,13 @@ function getLastModifiedDateQuery {
     )
 
     $lastModifiedDayOrMonthOrYearArr = $lastModifiedDayOrMonthOrYear.Split(":");
-    $dayOrMonthOrYear = $lastModifiedDayOrMonthOrYearArr[0];
-    $number = $lastModifiedDayOrMonthOrYearArr[1];
+    $number = 30;
+    $dayOrMonthOrYear = 'day';
 
-    if ($null -eq $lastModifiedDayOrMonthOrYear -or '' -eq $lastModifiedDayOrMonthOrYear) {
-        $number = 30;
-        $dayOrMonthOrYear = 'day';
+    if($null -ne $lastModifiedDayOrMonthOrYearArr -and $lastModifiedDayOrMonthOrYearArr.length -eq 2)
+    {
+        $dayOrMonthOrYear = $lastModifiedDayOrMonthOrYearArr[0];
+    $number = $lastModifiedDayOrMonthOrYearArr[1];
     }
 
     if ($null -eq $number -or '' -eq $number) {
@@ -230,16 +231,17 @@ function getLastAccessedDateTimeFilter {
         [string]$lastAccessedDayOrMonthOrYear
     )
     $lastAccessedDayOrMonthOrYearArr = $lastAccessedDayOrMonthOrYear.Split(":");
-    $dayOrMonthOrYear = $lastAccessedDayOrMonthOrYearArr[0];
-    $number = $lastAccessedDayOrMonthOrYearArr[1];
+    $number = 90;
+    $dayOrMonthOrYear = 'day';
 
-    if ($null -eq $lastAccessedDayOrMonthOrYear -or '' -eq $lastAccessedDayOrMonthOrYear) {
-        $number = 30;
-        $dayOrMonthOrYear = 'day';
+    if($null -ne $lastAccessedDayOrMonthOrYearArr -and $lastAccessedDayOrMonthOrYearArr.length -eq 2)
+    {
+        $dayOrMonthOrYear = $lastAccessedDayOrMonthOrYearArr[0];
+        $number = $lastAccessedDayOrMonthOrYearArr[1];
     }
 
     if ($null -eq $number -or '' -eq $number) {
-        $number = 30;
+        $number = 90;
     }
 
     if ($null -eq $dayOrMonthOrYear -or '' -eq $dayOrMonthOrYear) {
@@ -270,9 +272,7 @@ function GetFileLastAccessedDate {
     $endDate = (Get-Date)
         
     #Search Unified Log
-    #$AuditLog = Search-UnifiedAuditLog -StartDate $StartDate -EndDate $EndDate -ResultSize 5000
     $auditLog = Search-UnifiedAuditLog -StartDate $startDate -EndDate $endDate -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet -ObjectIds $fileAbsoluteURL
-    #$auditLog = Search-UnifiedAuditLog -StartDate $startDate -EndDate $endDate -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet
     if ($null -ne $auditLog) {
         if ($auditLog.length -gt 1) {
             $auditSortedResults = $auditLog | Sort-Object -Property CreationDate | Select-Object -Last 1;
@@ -287,27 +287,6 @@ function GetFileLastAccessedDate {
 
     WriteInfoLog "Finished get file last accessed date for file $($fileRelativeUrl)" -ForegroundColor Green;
     return $lastAccessedDate;
-    <#
-        #Connect to Exchange Online
-Connect-ExchangeOnline -ShowBanner:$False
- 
-#Set Dates
-$StartDate = (Get-Date).AddDays(-7)
-$EndDate = (Get-Date)
- 
-#Search Unified Log
-#$AuditLog = Search-UnifiedAuditLog -StartDate $StartDate -EndDate $EndDate -ResultSize 5000
-$AuditLog = Search-UnifiedAuditLog -StartDate 5/1/2018 -EndDate 5/8/2018 -RecordType SharePointFileOperation -Operations FileAccessed -SessionId "WordDocs_SharepointViews"-SessionCommand ReturnLargeSet
-$AuditLogResults = $AuditLog.AuditData | ConvertFrom-Json | select CreationTime, UserID, Operation, ClientIP, ObjectID
-$AuditLogResults
-$AuditLogResults | Export-csv -Path $CSVPath -NoTypeInformation
- 
-#Disconnect Exchange Online
-Disconnect-ExchangeOnline
-
-
-#Read more: https://www.sharepointdiary.com/2019/09/sharepoint-online-search-audit-logs-in-security-compliance-center.html#ixzz8Gd3K7YWi
-        #>
 }
 
 function ScanFiles {
