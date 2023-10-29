@@ -36,7 +36,7 @@ We must turn ON the audit logs feature in the Compliance Center before you acces
   | reportLevel  | no | null | enter report level needed (allowed values:listLevel or fileLevel)|
   | includeLastAccessed  | no | null | If fileLevel, please enter yes/no to include last accessed files (allowed values:yes or no)|
   | lastModifieddayOrMonthOrYear  | no | day:30 | If fileLevel, please enter day/month/year with number to use for files last modified condition (allowed values:'day:30' or 'month:30' or 'year:10') |
-  | lastAccesseddayOrMonthOrYear  | no | day:90 |  If fileLevel, please enter day/month/year with number to use for files last accessed condition (allowed values:'day:90') Audits limited to 90 days maximum|
+  | lastAccesseddayOrMonthOrYear  | no | day:90 |  If fileLevel, please enter day/month/year with number to use for files last accessed condition (allowed values:'day:90') Audits limited to E3:90 days & E5:365 days maximum|
 
 3. Once the script run is completed successfully, you should have an CSV file created with name *Report_<yyyyMMddhhmmss>_listLevel* or *Report_<yyyyMMddhhmmss>_fileLevel*
    
