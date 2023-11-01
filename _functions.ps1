@@ -219,10 +219,10 @@ function getLastModifiedDateQuery {
     }
     
     switch ($dayOrMonthOrYear) {
-        'day' { return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>" }
-        'month' { return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetMonths='-$number'/></Value></Geq></Where></Query></View>" }
-        'year' { return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetYears='-$number'/></Value></Geq></Where></Query></View>" }
-        default { return "<View><Query><Where><Geq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Geq></Where></Query></View>" }
+        'day' { return "<View><Query><Where><Leq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Leq></Where></Query></View>" }
+        'month' { return "<View><Query><Where><Leq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetMonths='-$number'/></Value></Leq></Where></Query></View>" }
+        'year' { return "<View><Query><Where><Leq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetYears='-$number'/></Value></Leq></Where></Query></View>" }
+        default { return "<View><Query><Where><Leq><FieldRef Name ='Modified'/><Value Type ='DateTime'><Today OffsetDays='-$number'/></Value></Leq></Where></Query></View>" }
     }
 }
 
