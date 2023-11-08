@@ -7,7 +7,7 @@
 # Last Modified Date:      2023/10/13
 #=====================================================================================================================
 param(
-    <#
+<#
     [string] $tenantFullName = "engage2syddev.onmicrosoft.com",
 
     [Parameter(Mandatory = $false)]
@@ -46,7 +46,7 @@ param(
 
     [Parameter(Mandatory = $false)]
     [string] $lastAccesseddayOrMonthOrYear = $(Read-Host -Prompt "If fileLevel, please enter day/month/year with number to use for files last accessed condition (allowed values:day:30) audits limited to 90 days")
-)
+    )
 
 $csvData = Import-Csv -Path ".\Appdetails.csv"
 if (-not $csvData) {
@@ -102,16 +102,7 @@ catch {
 #Assemblies Install
 #=======================================================
 Install-RequiredModules
-
-try {
-    #Import-Module Microsoft.Online.SharePoint.PowerShell -DisableNameChecking | out-null
-    Import-Module PnP.PowerShell -DisableNameChecking | out-null
-    #"$PSScriptRoot\bin\*" | gci -include '*.psm1','*.ps1' | Import-Module -DisableNameChecking | out-null
-}
-catch {
-    Write-Error "Could not load required assemblies"
-    exit
-}
+Import-Module PnP.PowerShell -ErrorAction SilentlyContinue # Ensure the PnP module is imported
 
 #========================================================
 #Retrieve Site Collections
