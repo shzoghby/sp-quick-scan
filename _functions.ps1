@@ -323,7 +323,7 @@ function ScanFiles {
                 LastModifiedTime  = $Item.FieldValues["Modified"]
                 LastAccessedDate  = $lastAccessedDate
                 ModifiedByEmail   = $Item.FieldValues["Editor"].Email
-                FileSizeMB        = [Math]::Round(($Item.FieldValues["File_x0020_Size"] / 1024 / 1024), 2) #File size in MB
+                FileSizeMB        = [Math]::Ceiling(($Item.FieldValues["File_x0020_Size"] / 1024 / 1024)) #File size in MB
             });
     }
     
@@ -375,9 +375,9 @@ function ScanLists {
                     ListTitle             = $listTitle;
                     LastModified          = $storage.LastModified;
                     TotalFileCount        = $($storage.TotalFileCount);
-                    TotalFileStreamSizeMB = $($storage.TotalFileStreamSize / 1024 / 1024);
-                    TotalSizeMB           = $($storage.TotalSize / 1024 / 1024);
-                    VersionSizeMB         = $($versionSize / 1024 / 1024);
+                    TotalFileStreamSizeMB = [Math]::Ceiling($($storage.TotalFileStreamSize / 1024 / 1024));
+                    TotalSizeMB           = [Math]::Ceiling($($storage.TotalSize / 1024 / 1024));
+                    VersionSizeMB         = [Math]::Ceiling($($versionSize / 1024 / 1024));
                 });
         }
     }
