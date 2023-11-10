@@ -23,23 +23,24 @@ $outputCsv = "appdetails.csv"
 # 1. Install and import required modules
 if ($PSVersionTable.PSEdition -eq "Desktop" -and (Get-Module -Name AzureAD -ListAvailable)) {
     Install-Module AzureAD -Force -AllowClobber -Scope CurrentUser
-    #Import-Module AzureAD
     Save-Module AzureAD -Repository AzureAD -Path "$PSScriptRoot\bin\Modules" -Force
+    Import-Module AzureAD
 }
 else {
     Install-Module AzureAD.Standard.Preview -Force -AllowClobber -Scope CurrentUser
-    #Import-Module AzureAD.Standard.Preview
     Save-Module AzureAD.Standard.Preview -Repository PSGallery -Path "$PSScriptRoot\bin\Modules" -Force
+    Import-Module AzureAD.Standard.Preview
 }
 
 # 2. Login to Azure AD
 Connect-AzureAD
 
 # 3. Check if the application already exists
-$appName = "AvePointQuickScan"
+$appName = "AvePointQuickScan TEST"
 $app = Get-AzureADApplication -Filter "DisplayName eq '$appName'"
 
 if (-not $app) {
+    Write-Host "Creating new app..." -NoNewline
     # Create the Azure App without permissions first
     $app = New-AzureADApplication -DisplayName $appName
      
@@ -65,8 +66,7 @@ if (-not $app) {
     $servicePrincipal = New-AzureADServicePrincipal -AppId $app.AppId
 
     # Output to Console
-    Write-Output "App ID: $($app.AppId)"
-    Write-Output "Certificate Thumbprint: $($cert.Thumbprint)"
+    Write-Host "App ID: $($app.AppId) - Certificate Thumbprint: $($cert.Thumbprint)" -ForegroundColor Green
 
     # Store the details for reference
     $outputObject = [PSCustomObject]@{
@@ -79,7 +79,9 @@ if (-not $app) {
         Remove-Item $outputCsv -Force
     }
 
+    Write-Host "Exporting CSV with new app details..." -NoNewline
     $outputObject | Export-Csv -Path $outputCsv -NoTypeInformation -Append
+    Write-Host "Success" -ForegroundColor Green
 }
 else {
     Write-Warning "Azure AD application '$appName' already exists."
@@ -87,6 +89,7 @@ else {
 }
 
 if ($null -ne $app) {
+    Write-Host "Granting App Permissions"
     if (-not $servicePrincipal) {
         Write-Error "Service Principal for $appName not found."
         exit

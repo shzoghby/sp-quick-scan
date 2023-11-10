@@ -204,10 +204,9 @@ function getLastModifiedDateQuery {
     $number = 30;
     $dayOrMonthOrYear = 'day';
 
-    if($null -ne $lastModifiedDayOrMonthOrYearArr -and $lastModifiedDayOrMonthOrYearArr.length -eq 2)
-    {
+    if ($null -ne $lastModifiedDayOrMonthOrYearArr -and $lastModifiedDayOrMonthOrYearArr.length -eq 2) {
         $dayOrMonthOrYear = $lastModifiedDayOrMonthOrYearArr[0];
-    $number = $lastModifiedDayOrMonthOrYearArr[1];
+        $number = $lastModifiedDayOrMonthOrYearArr[1];
     }
 
     if ($null -eq $number -or '' -eq $number) {
@@ -234,8 +233,7 @@ function getLastAccessedDateTimeFilter {
     $number = 90;
     $dayOrMonthOrYear = 'day';
 
-    if($null -ne $lastAccessedDayOrMonthOrYearArr -and $lastAccessedDayOrMonthOrYearArr.length -eq 2)
-    {
+    if ($null -ne $lastAccessedDayOrMonthOrYearArr -and $lastAccessedDayOrMonthOrYearArr.length -eq 2) {
         $dayOrMonthOrYear = $lastAccessedDayOrMonthOrYearArr[0];
         $number = $lastAccessedDayOrMonthOrYearArr[1];
     }
@@ -513,19 +511,33 @@ function GrantAppPermissions {
     $exchangeOnine = Get-AzureADServicePrincipal -Filter "AppId eq '00000002-0000-0ff1-ce00-000000000000'"
  
     # Check if the permission already exists
-    $existingSpOnlinePermission = Get-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId | Where-Object { $_.ResourceId -eq $spOnline.ObjectId }
-    $existingExchangeOnlinePermission = Get-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId | Where-Object { $_.ResourceId -eq $exchangeOnine.ObjectId }
+    $existingSpOnlinePermission = Get-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId | Where-Object { $_.ResourceId -eq $spOnline.ObjectId } | Out-Null
+    $existingExchangeOnlinePermission = Get-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId | Where-Object { $_.ResourceId -eq $exchangeOnine.ObjectId } | Out-Null
  
     # Grant Full Control permission to SharePoint Online if not already granted
     if (-not $existingSpOnlinePermission) {
+        Write-Host "Granting Sites App Permission..." -NoNewline
         $fullControlPermission = $spOnline.AppRoles | Where-Object { $_.Value -eq "Sites.FullControl.All" }
-        New-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId -PrincipalId $servicePrincipalObjectId -Id $fullControlPermission.Id -ResourceId $spOnline.ObjectId
+        try {
+            New-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId -PrincipalId $servicePrincipalObjectId -Id $fullControlPermission.Id -ResourceId $spOnline.ObjectId -ErrorAction SilentlyContinue
+            Write-Host "Success" -ForegroundColor Green    
+        }
+        catch {
+            WriteWarnLog "already granted" 
+        }
     }
  
     # GrantExchange.ManageAsApp permission to Office 365 Exchange Online if not already granted
     if (-not $existingExchangeOnlinePermission) {
+        Write-Host "Granting Exchange App Permission..." -NoNewline
         $exchangePermission = $exchangeOnine.AppRoles | Where-Object { $_.Value -eq "Exchange.ManageAsApp" }
-        New-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId -PrincipalId $servicePrincipalObjectId -Id $exchangePermission.Id -ResourceId $exchangeOnine.ObjectId
+        try {
+            New-AzureADServiceAppRoleAssignment -ObjectId $servicePrincipalObjectId -PrincipalId $servicePrincipalObjectId -Id $exchangePermission.Id -ResourceId $exchangeOnine.ObjectId -ErrorAction SilentlyContinue
+            Write-Host "Success" -ForegroundColor Green        
+        }
+        catch {
+            WriteWarnLog "already granted" 
+        }
     } 
 }
 Write-Host 'Success' -ForegroundColor Green
