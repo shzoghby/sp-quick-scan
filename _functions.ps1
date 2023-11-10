@@ -262,7 +262,7 @@ function GetFileLastAccessedDate {
         [string]$lastAccessedDayOrMonthOrYear
     )
     $lastAccessedDate = '';
-    if($webUrl.IndexOf("/sites") -ne -1) {
+    if($webUrl.ToLower().IndexOf("/sites") -ne -1) {
         $fileAbsoluteURL = "$($webUrl.SubString(0, $webUrl.ToLower().IndexOf("/sites")))$fileRelativeUrl";
     }
     else {
