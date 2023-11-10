@@ -264,7 +264,12 @@ function GetFileLastAccessedDate {
         [string]$lastAccessedDayOrMonthOrYear
     )
     $lastAccessedDate = '';
-    $fileAbsoluteURL = "$($webUrl.SubString(0, $webUrl.IndexOf("/sites")))$fileRelativeUrl";
+    if($webUrl.IndexOf("/sites") -ne -1) {
+        $fileAbsoluteURL = "$($webUrl.SubString(0, $webUrl.ToLower().IndexOf("/sites")))$fileRelativeUrl";
+    }
+    else {
+        $fileAbsoluteURL = "$($webUrl)$fileRelativeUrl";
+    }
     WriteInfoLog "Begin get file last accessed date for file $($fileRelativeUrl)"
 
     #Set Dates
@@ -411,7 +416,8 @@ function ScanWebs {
     foreach ($list in $lists) {
         try {
             $folderName = $list.RootFolder.ServerRelativeUrl.Replace($web.ServerRelativeUrl, "")          
-            if ($folderName -eq "/Style Library" -or $folderName -eq "/FormServerTemplates") {
+            if ($folderName.ToLower() -eq "/style library" -or $folderName.ToLower() -eq "/formservertemplates" -or $list.Title.ToLower() -eq "site assets" -or $list.Title.ToLower() -eq "style library" -or $list.Title.ToLower() -eq "form templates") {
+                WriteInfoLog "Skipping list $($list.Title) with folderName $folderName"
                 continue;
             }
             
@@ -420,7 +426,6 @@ function ScanWebs {
                     $returnObject = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id;
                     if ($null -ne $returnObject) {              
                         $listReportLines.Add($returnObject[$returnObject.length - 1]);
-                        #$listReportLines.Add($returnObject);
                     }
                     else {
                         WriteWarnLog "The report line of the list $($list.Title) is null" 
