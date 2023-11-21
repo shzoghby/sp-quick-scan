@@ -19,7 +19,7 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('yes', 'no')]
-    [string] $includeLastAccessed = "yes",
+    [string] $includeLastAccessed = "no",
 
     [Parameter(Mandatory = $false)]
     [string] $lastModifieddayOrMonthOrYear = "day:100",
@@ -39,13 +39,14 @@ param(
 
     [Parameter(Mandatory = $false)]
     [ValidateSet('yes', 'no')]
-    [string] $includeLastAccessed = $(Read-Host -Prompt "If fileLevel, please enter yes/no to include last accessed files (allowed values:yes or no)"),
+    [string] $includeLastAccessed = $(Read-Host -Prompt "Please press enter if listLevel, otherwise enter yes/no to include last accessed files (allowed values:yes or no)"),
     
     [Parameter(Mandatory = $false)]
-    [string] $lastModifieddayOrMonthOrYear = $(Read-Host -Prompt "If fileLevel, please enter day/month/year with number to use for files last modified condition (allowed values:day:30 or month:30 or year:10)"),
+    [string] $lastModifieddayOrMonthOrYear = $(Read-Host -Prompt "Please press enter if listLevel, otherwise enter day/month/year with number to use for files last modified condition (allowed values:day:30 or month:30 or year:10)"),
 
     [Parameter(Mandatory = $false)]
-    [string] $lastAccesseddayOrMonthOrYear = $(Read-Host -Prompt "If fileLevel, please enter day/month/year with number to use for files last accessed condition (allowed values:day:30) audits limited to 90 days")
+    [string] $lastAccesseddayOrMonthOrYear = $(Read-Host -Prompt "Please press enter if listLevel or includeLastAccessed is no, otherwise enter day/month/year with number to use for files last accessed condition (allowed values:day:30)")
+    #>
     )
 
 $csvData = Import-Csv -Path ".\Appdetails.csv"

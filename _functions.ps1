@@ -308,6 +308,11 @@ function ScanFiles {
     $ListItems = Get-PnPListItem -List $listTitle -Query $query
     #Enumerate all list items to get file details
     ForEach ($Item in $ListItems) {
+        if ($Item.FieldValues["File_x0020_Type"] -eq "" -or $null -eq $Item.FieldValues["File_x0020_Type"]) {
+            WriteInfoLog "Skipping item $($Item.FieldValues["File_x0020_Type"]) wiht no file type"
+            continue;
+        }
+
         if ($includeLastAccessed -eq "yes") {
             $lastAccessedDate = GetFileLastAccessedDate -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -fileRelativeUrl $($Item.FieldValues["FileRef"]) -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear
         }
@@ -404,7 +409,7 @@ function ScanWebs {
         [string]$includeLastAccessed,
         [string]$lastAccesseddayOrMonthOrYear
     )
-    $listReportLines = New-Object 'System.Collections.Generic.List[PSCustomObject]'
+    $listReportLines = @()
     $web = Get-PnPWeb -Identity $webId
     # Use our new connection function
     # Connect to the web
@@ -423,7 +428,7 @@ function ScanWebs {
                 "listLevel" {
                     $returnObject = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id;
                     if ($null -ne $returnObject) {              
-                        $listReportLines.Add($returnObject[$returnObject.length - 1]);
+                        $listReportLines += $returnObject[$returnObject.length - 1];
                     }
                     else {
                         WriteWarnLog "The report line of the list $($list.Title) is null" 
@@ -434,7 +439,7 @@ function ScanWebs {
                     $returnObject = ScanFiles -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear -includeLastAccessed $includeLastAccessed
 
                     if ($null -ne $returnObject) {              
-                        $listReportLines.Add($returnObject);
+                        $listReportLines += $returnObject[$returnObject.length - 1];
                     }
                     else {
                         WriteWarnLog "The report line of the list $($list.Title) is null" 
@@ -445,8 +450,7 @@ function ScanWebs {
                 Default {
                     $returnObject = ScanLists -sitecollectionUrl $sitecollectionUrl -webUrl $webUrl -listTitle $list.Title -listRootFolder $folderName -listId $list.Id;
                     if ($null -ne $returnObject) {              
-                        $listReportLines.Add($returnObject[$returnObject.length - 1]);
-                        #$listReportLines.Add($returnObject);
+                        $listReportLines += $returnObject[$returnObject.length - 1];
                     }
                     else {
                         WriteWarnLog "The report line of the list $($list.Title) is null" 
@@ -478,7 +482,7 @@ function ScanSiteCollection {
         [string]$lastAccesseddayOrMonthOrYear
     )
     try {
-        $webReportLines = New-Object 'System.Collections.Generic.List[PSCustomObject]'
+        $webReportLines = @()
         # Connect to the specific site collection with MFA
         Connect-PnPOnline -Url $url -ClientId $clientId -Thumbprint $thumbprint -Tenant $tenantFullName
 
@@ -488,10 +492,10 @@ function ScanSiteCollection {
         foreach ($web in $webs) {
             try {
                 $webReportLine = ScanWebs -tenantFullName $tenantFullName -ClientId $clientId -Thumbprint $thumbprint -webId $web.Id -webUrl $web.Url -sitecollectionUrl $url -reportLevel $reportLevel -lastModifieddayOrMonthOrYear $lastModifieddayOrMonthOrYear -includeLastAccessed $includeLastAccessed -lastAccesseddayOrMonthOrYear $lastAccesseddayOrMonthOrYear
-                $webReportLines.Add($webReportLine)
+                $webReportLines += $webReportLine
             }
             catch {
-                WriteErrorLog "An error occurred while scanning the site collection $($url).Exception:$($_.Exception)"
+                WriteErrorLog "An error occurred while scanning the web $($url).Exception:$($_.Exception)"
             }
            
         }   
