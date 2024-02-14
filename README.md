@@ -15,8 +15,11 @@ We must turn ON the audit logs feature in the Compliance Center before you acces
 4. The final step is to make sure that Exchange Online recognizes the automation account which hosts the managed identity as an Exchange administrator. This is done by assigning the Exchange Administrator role to the automation account’s app in the Azure AD admin center.
 
 ![](README/app-access-1.png)
+
 ![](README/app-access-2.png)
+
 ![](README/app-access-3.png)
+
 ![](README/app-access-4.png)
 
 ### Create Azure App
